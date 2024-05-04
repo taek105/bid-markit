@@ -1,8 +1,7 @@
 package com.capstone.bidmarkit.service;
-import com.capstone.bidmarkit.domain.Bid;
+
 import com.capstone.bidmarkit.domain.Product;
 import com.capstone.bidmarkit.domain.ProductImg;
-import com.capstone.bidmarkit.dto.AddBidRequest;
 import com.capstone.bidmarkit.dto.AddProductRequest;
 import com.capstone.bidmarkit.dto.ProductDetailResponse;
 import com.capstone.bidmarkit.dto.ProductListResponse;
@@ -11,7 +10,6 @@ import com.capstone.bidmarkit.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Collectors;
 

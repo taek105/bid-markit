@@ -1,7 +1,6 @@
 package com.capstone.bidmarkit.service;
 
 import com.capstone.bidmarkit.domain.AutoBid;
-import com.capstone.bidmarkit.domain.Member;
 import com.capstone.bidmarkit.dto.AddAutoBidRequest;
 import com.capstone.bidmarkit.repository.AutoBidRepository;
 import lombok.RequiredArgsConstructor;

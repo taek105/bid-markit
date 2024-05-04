@@ -3,7 +3,6 @@ package com.capstone.bidmarkit.config;
 import com.capstone.bidmarkit.config.jwt.LoginFilter;
 import com.capstone.bidmarkit.config.jwt.TokenAuthenticationFilter;
 import com.capstone.bidmarkit.config.jwt.TokenProvider;
-import com.capstone.bidmarkit.service.MemberDetailService;
 import com.capstone.bidmarkit.service.RefreshTokenService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -13,7 +12,6 @@ import org.springframework.security.config.annotation.authentication.configurati
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
-import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;

@@ -1,8 +1,6 @@
 package com.capstone.bidmarkit.service;
 
-import com.capstone.bidmarkit.domain.AutoBid;
 import com.capstone.bidmarkit.domain.Bid;
-import com.capstone.bidmarkit.domain.Member;
 import com.capstone.bidmarkit.domain.Product;
 import com.capstone.bidmarkit.dto.AddBidRequest;
 import com.capstone.bidmarkit.repository.BidRepository;
