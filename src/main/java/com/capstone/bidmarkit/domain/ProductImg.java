@@ -28,15 +28,19 @@ public class ProductImg {
     @Column(name = "img_url")
     private String imgUrl;
 
+    @Column(name = "is_thumbnail")
+    private Boolean isThumbnail;
+
     @CreatedDate
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
     @Builder
-    public ProductImg(int id, Product product, String imgUrl) {
+    public ProductImg(int id, Product product, String imgUrl, Boolean isThumbnail) {
         this.id = id;
         this.product = product;
         this.imgUrl = imgUrl;
+        this.isThumbnail = isThumbnail;
     }
 
     public void setProduct(Product product) {

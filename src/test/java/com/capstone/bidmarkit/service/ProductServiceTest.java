@@ -55,8 +55,9 @@ class ProductServiceTest {
 //                    .initPrice(price)
 //                    .build();
 //
-//            for (String img: imgs) {
-//                ProductImg newImg = ProductImg.builder().imgUrl(img).product(product).build();
+//            for (int j = 0; j < imgs.size(); j++) {
+//
+//                ProductImg newImg = ProductImg.builder().imgUrl(imgs.get(j)).product(product).isThumbnail(j == 0).build();
 //                imgList.add(newImg);
 //            }
 //            product.setImages(imgList);

@@ -10,8 +10,8 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ProductDetailResponse {
-    private List<String> url;
-    private String name;
+    private List<String> images;
+    private String productName;
     private int bidPrice;
     private int initPrice;
     private int price;

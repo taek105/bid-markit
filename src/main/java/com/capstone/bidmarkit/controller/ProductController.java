@@ -1,12 +1,10 @@
 package com.capstone.bidmarkit.controller;
 
-import com.capstone.bidmarkit.domain.Product;
-import com.capstone.bidmarkit.dto.AddProductRequest;
-import com.capstone.bidmarkit.dto.ProductDetailResponse;
-import com.capstone.bidmarkit.dto.ProductListResponse;
-import com.capstone.bidmarkit.dto.PurchaseRequest;
+import com.capstone.bidmarkit.dto.*;
 import com.capstone.bidmarkit.service.ProductService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -14,22 +12,20 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 
-import java.util.List;
-
 @RequiredArgsConstructor
 @Controller
 public class ProductController {
     private final ProductService productService;
 
-    @PostMapping("/product")
+    @PostMapping("/products")
     public ResponseEntity<Void> enrollProduct(@RequestBody AddProductRequest request) {
         productService.save(request);
         return ResponseEntity.ok().build();
     }
 
     @GetMapping("/products")
-    public ResponseEntity<List<ProductListResponse>> getProducts() {
-        return ResponseEntity.ok(productService.findPersonalizedList());
+    public ResponseEntity<Page<ProductBriefResponse>> getProducts(@RequestBody ProductPageRequest request) {
+        return ResponseEntity.ok().body(productService.findAllOrderByDeadlineAsc(PageRequest.of(request.getPageNum(), request.getSize())));
     }
 
     @GetMapping("/products/{productId}")
