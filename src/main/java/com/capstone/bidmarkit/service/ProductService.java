@@ -20,6 +20,7 @@ public class ProductService {
     private final ProductImgRepository productImgRepository;
 
     public int save(AddProductRequest dto) {
+        productImgRepository.saveAll(dto.getImages());
         return productRepository.save(
                 Product.builder()
                         .id(dto.getId())

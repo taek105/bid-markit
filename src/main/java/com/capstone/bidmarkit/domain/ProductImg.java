@@ -17,11 +17,13 @@ import java.time.LocalDateTime;
 @EntityListeners(AuditingEntityListener.class)
 public class ProductImg {
     @Id
+    @GeneratedValue(strategy = GenerationType.AUTO)
     @Column(name = "img_id", updatable = false)
-    private int id;
+    private Integer id;
 
-    @Column(name = "product_id")
-    private int productId;
+    @ManyToOne(fetch=FetchType.LAZY)
+    @JoinColumn(name="product_id")
+    private Product product;
 
     @Column(name = "img_url")
     private String imgUrl;
@@ -31,9 +33,17 @@ public class ProductImg {
     private LocalDateTime createdAt;
 
     @Builder
-    public ProductImg(int id, int productId, String imgUrl) {
+    public ProductImg(int id, Product product, String imgUrl) {
         this.id = id;
-        this.productId = productId;
+        this.product = product;
         this.imgUrl = imgUrl;
+    }
+
+    public void setProduct(Product product) {
+        if(this.product != null) {
+            this.product.getImages().remove(this);
+        }
+        this.product = product;
+        product.getImages().add(this);
     }
 }

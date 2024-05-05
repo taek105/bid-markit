@@ -17,17 +17,18 @@ import java.time.LocalDateTime;
 @EntityListeners(AuditingEntityListener.class)
 public class AutoBid {
     @Id
+    @GeneratedValue(strategy = GenerationType.AUTO)
     @Column(name = "auto_bid_id", updatable = false)
-    private int id;
+    private Integer id;
 
     @Column(name = "product_id")
-    private int productId;
+    private Integer productId;
 
     @Column(name = "member_id")
     private String memberId;
 
     @Column(name = "ceiling_price")
-    private int ceilingPrice;
+    private Integer ceilingPrice;
 
     @CreatedDate
     @Column(name = "created_at", updatable = false)

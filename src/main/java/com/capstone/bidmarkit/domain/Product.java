@@ -7,6 +7,8 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Table(name = "products")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -16,8 +18,9 @@ import java.time.LocalDateTime;
 @EntityListeners(AuditingEntityListener.class)
 public class Product {
     @Id
+    @GeneratedValue(strategy = GenerationType.AUTO)
     @Column(name = "product_id", updatable = false)
-    private int id;
+    private Integer id;
 
     @Column(name = "member_id")
     private String memberId;
@@ -26,7 +29,7 @@ public class Product {
     private String name;
 
     @Column(name = "category")
-    private int category;
+    private String category;
 
     @Column(name = "state")
     private byte state;
@@ -35,16 +38,19 @@ public class Product {
     private String content;
 
     @Column(name = "init_price")
-    private int initPrice;
+    private Integer initPrice;
 
     @Column(name = "bid_price")
-    private int bidPrice;
+    private Integer bidPrice;
 
     @Column(name = "price")
-    private int price;
+    private Integer price;
 
     @Column(name = "deadline")
     private LocalDateTime deadline;
+
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL)
+    private List<ProductImg> images = new ArrayList<>();
 
     @CreatedDate
     @Column(name = "created_at", updatable = false)
@@ -55,7 +61,7 @@ public class Product {
     private LocalDateTime updatedAt;
 
     @Builder
-    public Product(int id, String memberId, String name, int category, String content, int initPrice, int price, LocalDateTime deadline) {
+    public Product(int id, String memberId, String name, String category, String content, int initPrice, int price, LocalDateTime deadline) {
         this.id = id;
         this.memberId = memberId;
         this.name = name;
@@ -64,7 +70,6 @@ public class Product {
         this.initPrice = initPrice;
         this.price = price;
         this.deadline = deadline;
-
         this.state = 0;
         this.bidPrice = initPrice;
     }
