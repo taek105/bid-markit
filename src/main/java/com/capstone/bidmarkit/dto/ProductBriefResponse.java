@@ -9,6 +9,6 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class ProductBriefResponse {
     String thumbnail, productName;
-    Integer bidPrice, price;
+    Integer productId, bidPrice, price, state;
     LocalDateTime deadline;
 }

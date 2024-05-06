@@ -15,6 +15,7 @@ public class ProductDetailResponse {
     private int bidPrice;
     private int initPrice;
     private int price;
+    private int state;
     private LocalDateTime deadline;
     private String sellerName;
     private String content;

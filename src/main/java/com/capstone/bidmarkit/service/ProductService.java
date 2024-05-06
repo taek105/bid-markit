@@ -56,7 +56,12 @@ public class ProductService {
         QProductImg productImg = QProductImg.productImg;
 
         List<ProductBriefResponse> results = queryFactory
-                .select(Projections.constructor(ProductBriefResponse.class, productImg.imgUrl, product.name, product.bidPrice, product.price, product.deadline))
+                .select(
+                        Projections.constructor(
+                        ProductBriefResponse.class,
+                        productImg.imgUrl, product.name, product.id,
+                        product.bidPrice, product.price, product.state, product.deadline)
+                )
                 .from(product)
                 .leftJoin(product.images, productImg)
                 .groupBy(product.id, productImg.imgUrl)
@@ -81,6 +86,7 @@ public class ProductService {
         res.setBidPrice(a.getBidPrice());
         res.setInitPrice(a.getInitPrice());
         res.setPrice(a.getPrice());
+        res.setState(a.getState());
         res.setDeadline(a.getDeadline());
         res.setSellerName(a.getMemberId());
         res.setContent(a.getContent());
