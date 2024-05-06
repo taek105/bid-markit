@@ -20,9 +20,9 @@ public class ProductController {
         return ResponseEntity.ok().build();
     }
 
-    @GetMapping("/products")
-    public ResponseEntity<Page<ProductBriefResponse>> getProducts(@RequestBody ProductPageRequest request) {
-        return ResponseEntity.ok().body(productService.findAllOrderByDeadlineAsc(PageRequest.of(request.getPageNum(), request.getSize())));
+    @GetMapping("/products/{pageNum}/{size}")
+    public ResponseEntity<Page<ProductBriefResponse>> getProducts(@PathVariable("pageNum") int pageNum, @PathVariable("size") int size) {
+        return ResponseEntity.ok().body(productService.findAllOrderByDeadlineAsc(PageRequest.of(pageNum, size)));
     }
 
     @GetMapping("/products/{productId}")
