@@ -40,10 +40,9 @@ public class WebSecurityConfig {
                 .formLogin(auth -> auth.disable())
                 .httpBasic(auth -> auth.disable())
                 .authorizeHttpRequests(auth -> auth
-//                        .requestMatchers("/login", "/member", "/accessToken").permitAll()
-//                        .requestMatchers("/test").hasRole("MEMBER")
-//                        .anyRequest().authenticated())
-                        .anyRequest().permitAll())
+                        .requestMatchers("/login", "/member", "/accessToken", "/products/**", "/error").permitAll()
+                        .requestMatchers("/test").hasRole("MEMBER")
+                        .anyRequest().authenticated())
                 .addFilterBefore(new TokenAuthenticationFilter(tokenProvider), LoginFilter.class)
                 .addFilterAt(
                         new LoginFilter(authenticationManager(authenticationConfiguration), tokenProvider, refreshTokenService),

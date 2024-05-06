@@ -2,6 +2,7 @@ package com.capstone.bidmarkit.service;
 
 import com.capstone.bidmarkit.config.jwt.TokenProvider;
 import com.capstone.bidmarkit.domain.Member;
+import io.jsonwebtoken.Claims;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -27,5 +28,9 @@ public class TokenService {
         Member member = memberService.findById(memberId);
 
         return tokenProvider.generateToken(member, Duration.ofHours(1));
+    }
+
+    public String getMemberId(String token) {
+        return tokenProvider.getMemberId(token);
     }
 }

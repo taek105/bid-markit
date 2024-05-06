@@ -32,7 +32,7 @@ public class Product {
     private String category;
 
     @Column(name = "state")
-    private byte state;
+    private Integer state;
 
     @Column(name = "content")
     private String content;

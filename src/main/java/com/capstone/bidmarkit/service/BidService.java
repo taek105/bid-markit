@@ -1,11 +1,22 @@
 package com.capstone.bidmarkit.service;
 
-import com.capstone.bidmarkit.domain.Bid;
-import com.capstone.bidmarkit.domain.Product;
+import com.capstone.bidmarkit.domain.*;
 import com.capstone.bidmarkit.dto.AddBidRequest;
+import com.capstone.bidmarkit.dto.BidResponse;
+import com.capstone.bidmarkit.dto.ProductBriefResponse;
+import com.capstone.bidmarkit.repository.AutoBidRepository;
 import com.capstone.bidmarkit.repository.BidRepository;
 import com.capstone.bidmarkit.repository.ProductRepository;
+import com.querydsl.core.types.Projections;
+import com.querydsl.jpa.impl.JPAQueryFactory;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.antlr.v4.runtime.Token;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.support.PageableExecutionUtils;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -14,28 +25,94 @@ import java.util.List;
 @Service
 public class BidService {
     private final BidRepository bidRepository;
+    private final AutoBidRepository autoBidRepository;
     private final ProductRepository productRepository;
+    private final TokenService tokenService;
 
-    public int save(AddBidRequest dto) {
+    @PersistenceContext
+    private EntityManager entityManager;
+
+    @Transactional
+    public Bid save(String token, AddBidRequest dto) {
+        // 입찰 대상 상품 미검색 시, 예외 발생
         Product product = productRepository.findById(dto.getProductId()).orElseThrow(() -> new IllegalArgumentException("Product not found"));
-        product.setBidPrice(dto.getPrice()); // 혹은 다른 방법으로 bid_price 수정
-        productRepository.save(product);
 
-        return bidRepository.save(
+        // 상품 상태가 판매 중이 아닐 경우, 예외 발생
+        if(product.getState() != 0)
+            throw new IllegalArgumentException("It is not a bidable product");
+
+        String requestMemberId = tokenService.getMemberId(token);
+
+        // 본인 상품을 자동 입찰 시도 시, 예외 발생
+        if(product.getMemberId() == requestMemberId)
+            throw new IllegalArgumentException("You can't bid for your product yourself.");
+
+        // 입찰 대상의 최소 상회 입찰가보다 낮은 가격으로 입찰 시도 시, 예외 발생
+        if(product.getBidPrice() + minBidPrice(product.getBidPrice()) >= dto.getPrice()) throw new IllegalArgumentException("Price to bid is not enough");
+
+        // 입찰 정보 저장
+        Bid newBid = bidRepository.save(
                 Bid.builder()
-                        .id(dto.getId())
                         .productId(dto.getProductId())
-                        .memberId(dto.getMemberId())
-                        .price(dto.getPrice())
+                        .memberId(requestMemberId)
+                        .price(dto.getPrice() > product.getPrice() ? product.getPrice() : dto.getPrice())
                         .build()
-        ).getId();
-    }
-    public List<Bid> findAllByProductId(int productId) {
-        List<Bid> bids = bidRepository.findAllByProductId(productId);
-        if (bids.isEmpty()) {
-            throw new IllegalArgumentException("No bids found for product ID: " + productId);
+        );
+        product.setBidPrice(newBid.getPrice());
+
+        AutoBid autoBid = autoBidRepository.findByProductId(dto.getProductId());
+
+        // 즉시구매가와 같거나 높은 가격으로 상회 입찰을 했을 경우, 즉시구매처리
+        if(newBid.getPrice().equals(product.getPrice())) {
+            if(autoBid != null) autoBidRepository.delete(autoBid);
+            product.setState(1);
+            return newBid;
         }
 
-        return bids;
+        // 자동 입찰이 설정되었을 경우, 자동 입찰 진행
+        if(autoBid != null) {
+            int calNewPrice = newBid.getPrice() + minBidPrice(newBid.getPrice());
+            // 자동 입찰 설정 금액이 최소 상회 입찰가보다 작다면, 자동 입찰 설정 해제 / 크다면, 자동 입찰 진행
+            if(autoBid.getCeilingPrice() < calNewPrice) {
+                autoBidRepository.delete(autoBid);
+                product.setBidPrice(newBid.getPrice());
+            } else {
+                Bid newBidByAuto = bidRepository.save(
+                        Bid.builder()
+                                .productId(autoBid.getProductId())
+                                .memberId(autoBid.getMemberId())
+                                .price(calNewPrice > product.getPrice() ? product.getPrice() : calNewPrice)
+                                .build()
+                );
+                // 즉시구매가와 같거나 높은 가격으로 상회 입찰을 했을 경우, 즉시구매처리
+                if(newBidByAuto.getPrice().equals(product.getPrice())) {
+                    product.setState(1);
+                }
+                product.setBidPrice(newBidByAuto.getPrice());
+            }
+        }
+        return newBid;
+    }
+
+    public List<BidResponse> findAllByProductId(int productId) {
+        JPAQueryFactory queryFactory = new JPAQueryFactory(entityManager);
+        QBid bid = QBid.bid;
+
+        List<BidResponse> results = queryFactory
+                .select(Projections.constructor(BidResponse.class, bid.memberId, bid.price, bid.createdAt))
+                .from(bid)
+                .where(bid.productId.eq(productId))
+                .orderBy(bid.price.desc())
+                .fetch();
+
+        return results;
+    }
+
+    public int minBidPrice(int currentPrice) {
+        if (currentPrice < 10000) return 100;
+        if (currentPrice < 50000) return 1000;
+        if (currentPrice < 100000) return 2500;
+        if (currentPrice < 500000) return 5000;
+        return 10000;
     }
 }

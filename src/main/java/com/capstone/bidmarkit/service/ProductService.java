@@ -1,18 +1,17 @@
 package com.capstone.bidmarkit.service;
 
-import com.capstone.bidmarkit.domain.Product;
-import com.capstone.bidmarkit.domain.ProductImg;
-import com.capstone.bidmarkit.domain.QProduct;
-import com.capstone.bidmarkit.domain.QProductImg;
+import com.capstone.bidmarkit.domain.*;
 import com.capstone.bidmarkit.dto.AddProductRequest;
 import com.capstone.bidmarkit.dto.ProductBriefResponse;
 import com.capstone.bidmarkit.dto.ProductDetailResponse;
+import com.capstone.bidmarkit.repository.BidRepository;
 import com.capstone.bidmarkit.repository.ProductImgRepository;
 import com.capstone.bidmarkit.repository.ProductRepository;
 import com.querydsl.core.types.Projections;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -27,11 +26,14 @@ import java.util.stream.Collectors;
 public class ProductService {
     private final ProductRepository productRepository;
     private final ProductImgRepository productImgRepository;
+    private final BidRepository bidRepository;
+    private final TokenService tokenService;
 
     @PersistenceContext
     private EntityManager entityManager;
 
 
+    @Transactional
     public int save(AddProductRequest dto) {
         productImgRepository.saveAll(dto.getImages());
         return productRepository.save(
@@ -86,9 +88,21 @@ public class ProductService {
         return res;
     }
 
-    public void purchaseProduct(int productId) {
+    @Transactional
+    public void purchaseProduct(String token, int productId) {
         Product product = productRepository.findById(productId).orElseThrow(() -> new IllegalArgumentException("Product not found"));
-        product.setState((byte) 3);
-        productRepository.save(product);
+
+        // 상품 상태가 판매 중이 아닐 경우, 예외 발생
+        if(product.getState() != 0)
+            throw new IllegalArgumentException("It is not a purchasable product");
+
+        product.setState(1);
+        product.setBidPrice(product.getPrice());
+        bidRepository.save(Bid.builder()
+                .productId(productId)
+                .memberId(tokenService.getMemberId(token))
+                .price(product.getPrice())
+                .build()
+        );
     }
 }
