@@ -8,6 +8,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -63,7 +64,8 @@ public class WebSecurityConfig {
                 .formLogin(auth -> auth.disable())
                 .httpBasic(auth -> auth.disable())
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/login", "/member", "/accessToken", "/products/**", "/bids/**", "/error", "/").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/products/**").permitAll()
+                        .requestMatchers("/login", "/member", "/accessToken", "/bids/**", "/error", "/").permitAll()
                         .requestMatchers("/test").hasRole("MEMBER")
                         .anyRequest().authenticated())
                 .addFilterBefore(new TokenAuthenticationFilter(tokenProvider), LoginFilter.class)

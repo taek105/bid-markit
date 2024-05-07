@@ -59,7 +59,7 @@ public class ProductService {
                 .select(
                         Projections.constructor(
                         ProductBriefResponse.class,
-                        productImg.imgUrl, product.name, product.id,
+                        productImg.imgUrl, product.name, product.category, product.id,
                         product.bidPrice, product.price, product.state, product.deadline)
                 )
                 .from(product)
@@ -83,6 +83,7 @@ public class ProductService {
                 .map(ProductImg::getImgUrl)
                 .collect(Collectors.toList()));
         res.setProductName(a.getName());
+        res.setCategory(a.getCategory());
         res.setBidPrice(a.getBidPrice());
         res.setInitPrice(a.getInitPrice());
         res.setPrice(a.getPrice());
