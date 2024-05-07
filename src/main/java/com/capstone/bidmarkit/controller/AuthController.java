@@ -21,7 +21,7 @@ public class AuthController {
                 .body(new CreateAccessTokenResponse("Bearer " + newAccessToken));
     }
 
-    @GetMapping("/test")
+    @RequestMapping("/")
     public ResponseEntity<Void> test() {
         return ResponseEntity.ok().build();
     }
