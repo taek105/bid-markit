@@ -4,7 +4,6 @@ import com.capstone.bidmarkit.domain.AutoBid;
 import com.capstone.bidmarkit.domain.Bid;
 import com.capstone.bidmarkit.domain.Product;
 import com.capstone.bidmarkit.dto.AddAutoBidRequest;
-import com.capstone.bidmarkit.dto.AddBidRequest;
 import com.capstone.bidmarkit.repository.AutoBidRepository;
 import com.capstone.bidmarkit.repository.BidRepository;
 import com.capstone.bidmarkit.repository.ProductRepository;
@@ -39,7 +38,7 @@ public class AutoBidService {
         String requestMemberId = tokenService.getMemberId(token);
 
         // 본인 상품을 자동 입찰 시도 시, 예외 발생
-        if(product.getMemberId() == requestMemberId)
+        if(product.getMemberId().equals(requestMemberId))
             throw new IllegalArgumentException("You can't bid for your product yourself.");
         
         int minBidPrice = product.getBidPrice() + minBidPrice(product.getBidPrice());
@@ -62,7 +61,7 @@ public class AutoBidService {
             autoBidRepository.save(newAutoBid);
             Optional<Bid> currentBid = bidRepository.findTopByProductIdOrderByPriceDesc(dto.getProductId());
             // 최고가 입찰 내역이 존재하고, 해당 입찰을 진행한 멤버가 지금 자동 입찰을 시도하는 멤버가 아닐 경우, 상회 입찰을 진행
-            if(currentBid.isPresent() && currentBid.get().getMemberId() != requestMemberId) {
+            if(currentBid.isPresent() && !currentBid.get().getMemberId().equals(requestMemberId)) {
                 bidRepository.save(
                         Bid.builder()
                         .productId(dto.getProductId())
