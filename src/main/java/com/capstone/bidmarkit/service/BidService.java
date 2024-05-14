@@ -39,7 +39,7 @@ public class BidService {
 
         // 상품 상태가 판매 중이 아닐 경우, 예외 발생
         if(product.getState() != 0)
-            throw new IllegalArgumentException("It is not a bidable product");
+            throw new IllegalArgumentException("It is not a biddable product");
 
         String requestMemberId = tokenService.getMemberId(token);
 
