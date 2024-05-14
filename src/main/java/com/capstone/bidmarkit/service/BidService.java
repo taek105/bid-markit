@@ -27,13 +27,12 @@ public class BidService {
     private final BidRepository bidRepository;
     private final AutoBidRepository autoBidRepository;
     private final ProductRepository productRepository;
-    private final TokenService tokenService;
 
     @PersistenceContext
     private EntityManager entityManager;
 
     @Transactional
-    public Bid save(String token, AddBidRequest dto) {
+    public Bid save(String memberId, AddBidRequest dto) {
         // 입찰 대상 상품 미검색 시, 예외 발생
         Product product = productRepository.findById(dto.getProductId()).orElseThrow(() -> new IllegalArgumentException("Product not found"));
 
@@ -41,10 +40,8 @@ public class BidService {
         if(product.getState() != 0)
             throw new IllegalArgumentException("It is not a bidable product");
 
-        String requestMemberId = tokenService.getMemberId(token);
-
         // 본인 상품을 자동 입찰 시도 시, 예외 발생
-        if(product.getMemberId() == requestMemberId)
+        if(product.getMemberId() == memberId)
             throw new IllegalArgumentException("You can't bid for your product yourself.");
 
         // 입찰 대상의 최소 상회 입찰가보다 낮은 가격으로 입찰 시도 시, 예외 발생
@@ -54,7 +51,7 @@ public class BidService {
         Bid newBid = bidRepository.save(
                 Bid.builder()
                         .productId(dto.getProductId())
-                        .memberId(requestMemberId)
+                        .memberId(memberId)
                         .price(dto.getPrice() > product.getPrice() ? product.getPrice() : dto.getPrice())
                         .build()
         );

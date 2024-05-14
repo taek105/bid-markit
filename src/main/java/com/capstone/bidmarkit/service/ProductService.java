@@ -7,18 +7,27 @@ import com.capstone.bidmarkit.dto.ProductDetailResponse;
 import com.capstone.bidmarkit.repository.BidRepository;
 import com.capstone.bidmarkit.repository.ProductImgRepository;
 import com.capstone.bidmarkit.repository.ProductRepository;
+import com.google.cloud.storage.BlobInfo;
+import com.google.cloud.storage.Storage;
+import com.google.cloud.storage.StorageOptions;
 import com.querydsl.core.types.Projections;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.support.PageableExecutionUtils;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
@@ -28,26 +37,51 @@ public class ProductService {
     private final ProductImgRepository productImgRepository;
     private final BidRepository bidRepository;
     private final TokenService tokenService;
+    private final Storage storage;
+
+    @Value("${spring.cloud.gcp.storage.bucket}")
+    private String bucketName;
 
     @PersistenceContext
     private EntityManager entityManager;
 
-
     @Transactional
-    public int save(AddProductRequest dto) {
-        productImgRepository.saveAll(dto.getImages());
-        return productRepository.save(
+    public Product save(String memberId, AddProductRequest dto) throws IOException {
+        Product newProduct = productRepository.save(
                 Product.builder()
-                        .id(dto.getId())
-                        .memberId(dto.getMemberId())
-                        .name(dto.getName())
+                        .memberId(memberId)
+                        .name(dto.getProductName())
                         .category(dto.getCategory())
                         .content(dto.getContent())
                         .initPrice(dto.getInitPrice())
                         .price(dto.getPrice())
-                        .deadline(dto.getDeadline())
+                        .deadline(LocalDateTime.now().plusDays(dto.getDeadline()))
                         .build()
-        ).getId();
+        );
+
+        List<ProductImg> images = new ArrayList<>();
+        for (int i = 0; i < dto.getImages().size(); i++) {
+            MultipartFile image = dto.getImages().get(i);
+            String uuid = UUID.randomUUID().toString();
+            BlobInfo blobInfo = storage.create(
+                    BlobInfo.newBuilder(bucketName, uuid)
+                            .setContentType(image.getContentType())
+                            .build(),
+                    image.getInputStream()
+            );
+
+            ProductImg newImage = productImgRepository.save(
+                    ProductImg.builder()
+                            .product(newProduct)
+                            .imgUrl("https://storage.googleapis.com/" + bucketName + '/' + uuid)
+                            .isThumbnail(i == 0)
+                            .build()
+            );
+            images.add(newImage);
+        }
+
+        newProduct.setImages(images);
+        return newProduct;
     }
 
     public Page<ProductBriefResponse> findAllOrderByDeadlineAsc(Pageable pageable) {

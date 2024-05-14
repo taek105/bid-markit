@@ -1,23 +1,20 @@
 package com.capstone.bidmarkit.dto;
 
-import com.capstone.bidmarkit.domain.ProductImg;
-import jakarta.persistence.Column;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
-
-import java.time.LocalDateTime;
+import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 
 @Getter
 @Setter
+@AllArgsConstructor
 public class AddProductRequest {
-    private int id;
-    private String memberId;
-    private String name;
+    private String productName;
     private String category;
     private String content;
     private int initPrice;
     private int price;
-    private LocalDateTime deadline;
-    private List<ProductImg> images;
+    private int deadline; // 일 수 기준
+    private List<MultipartFile> images;
 }

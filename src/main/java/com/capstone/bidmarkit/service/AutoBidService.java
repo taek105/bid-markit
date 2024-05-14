@@ -22,13 +22,12 @@ public class AutoBidService {
     private final AutoBidRepository autoBidRepository;
     private final BidRepository bidRepository;
     private final ProductRepository productRepository;
-    private final TokenService tokenService;
 
     @PersistenceContext
     private EntityManager entityManager;
 
     @Transactional
-    public AutoBid save(String token, AddAutoBidRequest dto) {
+    public AutoBid save(String memberId, AddAutoBidRequest dto) {
         // 입찰 대상 상품 미검색 시, 예외 발생
         Product product = productRepository.findById(dto.getProductId()).orElseThrow(() -> new IllegalArgumentException("Product not found"));
 
@@ -36,10 +35,8 @@ public class AutoBidService {
         if(product.getState() != 0)
             throw new IllegalArgumentException("It is not a biddable product");
 
-        String requestMemberId = tokenService.getMemberId(token);
-
         // 본인 상품을 자동 입찰 시도 시, 예외 발생
-        if(product.getMemberId() == requestMemberId)
+        if(product.getMemberId() == memberId)
             throw new IllegalArgumentException("You can't bid for your product yourself.");
         
         int minBidPrice = product.getBidPrice() + minBidPrice(product.getBidPrice());
@@ -54,7 +51,7 @@ public class AutoBidService {
         AutoBid newAutoBid = AutoBid.builder()
                 .productId(dto.getProductId())
                 .ceilingPrice(dto.getCeilingPrice())
-                .memberId(requestMemberId)
+                .memberId(memberId)
                 .build();
 
         // 기존 자동 입찰 설정이 없을 경우,
@@ -62,11 +59,11 @@ public class AutoBidService {
             autoBidRepository.save(newAutoBid);
             Optional<Bid> currentBid = bidRepository.findTopByProductIdOrderByPriceDesc(dto.getProductId());
             // 최고가 입찰 내역이 존재하고, 해당 입찰을 진행한 멤버가 지금 자동 입찰을 시도하는 멤버가 아닐 경우, 상회 입찰을 진행
-            if(currentBid.isPresent() && currentBid.get().getMemberId() != requestMemberId) {
+            if(currentBid.isPresent() && currentBid.get().getMemberId() != memberId) {
                 bidRepository.save(
                         Bid.builder()
                         .productId(dto.getProductId())
-                                .memberId(requestMemberId)
+                                .memberId(memberId)
                                 .price(minBidPrice)
                                 .build()
                 );
@@ -90,7 +87,7 @@ public class AutoBidService {
             bidRepository.save(
                     Bid.builder()
                     .productId(dto.getProductId())
-                    .memberId(requestMemberId)
+                    .memberId(memberId)
                     .price(minAutoBidPrice)
                     .build()
             );
@@ -107,6 +104,7 @@ public class AutoBidService {
                 .price(minAutoBidPrice)
                 .build()
         );
+        product.setBidPrice(minAutoBidPrice);
 
         return newAutoBid;
     }

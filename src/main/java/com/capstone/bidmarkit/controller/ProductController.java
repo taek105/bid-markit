@@ -2,6 +2,7 @@ package com.capstone.bidmarkit.controller;
 
 import com.capstone.bidmarkit.dto.*;
 import com.capstone.bidmarkit.service.ProductService;
+import com.capstone.bidmarkit.service.TokenService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -9,14 +10,17 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
+
 @RequiredArgsConstructor
 @Controller
 public class ProductController {
     private final ProductService productService;
+    private final TokenService tokenService;
 
     @PostMapping("/products")
-    public ResponseEntity<Void> enrollProduct(@RequestBody AddProductRequest request) {
-        productService.save(request);
+    public ResponseEntity<Void> enrollProduct(@RequestHeader(name="Authorization") String token, AddProductRequest request) throws IOException {
+        productService.save(tokenService.getMemberId(token.substring(7)), request);
         return ResponseEntity.ok().build();
     }
 

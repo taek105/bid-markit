@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "utility-melody-419616",
+  "private_key_id": "4ede72e31cbd487a0ae571f0582b75497a3c573d",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQC/ESPHN2rjE3Yd\nwX2PDC9proXKcj1/sAFZVQKI0jJVoW4EZ1P2dZknJRc3PpwD6fYf/CUTrdmutsES\nX/vZy2cLskjgViuAMAMfrdy21d+06Y+hcy4n193y7mC60FFT57VZGNxZzM95czMX\nPhHRnGffY6vZ9saOnZGKnDW39fACgzo7SGPpuZl4Z4V1Zzia5Qnasf2rX7ww6xTa\nkm9tXILYQFL1etrxj/54qYtgFtXFjwG1EMjinZq1vGVhrvAdmC6cvaS1FtfQxCoU\nOKpheDDrdIQkL1kdejsMXnnk/qnee9kl76tgEww1SaX9qkYZXETw9AcJBnLWMj2P\nKQdRVLpLAgMBAAECggEAXieMmYXqItd6y+QHQ0BOdwY9QQu12Z/6sjJtqs3mZwND\ni2D948SEweEJxTwRtu4Kzy06ei2gSXQexbbODcAp2f4z4nUkP6mpSGmti93uPSEh\nmf5//rtmUOn+eeDhSvcyiyLwp0IB9cf6o9f/AOvR1igwThtJMotcZtFeuXY1HY8C\nT9E2hmfEzXHukCc780HHdo95aevN/BIkvUvKO0eZcENq2AcnSpNIzXfWQwOwl5Oe\nQOZmmRSgNFJykeAr8XiszJZFpkQCaTkS8L2IrW6Yx+7UpBighiMLoTNIqOi2BRHE\nv+ZVrGQwwGyJ5WvKxnWkzgq7vMozacZpBmFDpsS0xQKBgQDimk+TL5GFvw1rgnMw\nFol08ZD5uzkYzFaKKW2dpSbC8fQctHYgX4yaYu/PP4YfV4jt6l6+ZPrb1flTzd69\npaOX+oSTvFgL6XFuJZBmptkqlynFZHDtfWMS7F7DFVkgdepY/bKLG51NhNCfcPFd\npFt48VYAccxXmx3yeAR0qZCCbwKBgQDX2qau2+YLjsd6sOWZBc32s27tmOQW7ExG\nTdEasz2uv0FhDRweRZglcf4M2NUDV2cne1fPapsM5eJdUcLjtO1spbXL7c4YBNSw\nUiqlLmz1FZMBV7begqZXJA/iyZh1Ra0ffAtRQdlhMh8HswwAzV4mEbvTB9n49Jp9\n3wPNoGND5QKBgQDJaDJWNi932woIhpfvI/jk0ljzPq9PFT/N6Wied83t87PvV46u\n035bMpjHckS50snH/Upcm9BEWPkUvaS+l1zClk4EKaFwZPsG1ah1NNNNAbKE2fNt\ngsbuaN0JNA5VxbiXhFaPQeocnnH3ZSGDA7Sx2H+CQaNIMnz5qCb9skDZTQKBgQCt\nUSVxVaPbN+O4Af345o5APkcdhBvww/9im+0AcVdfzrWiRbKEJAFMX8FLc3dmXXG4\nY/NX2hNxQcyGfbXsvEO/bzcP7XwEESzt/qu7QhG+oHoPI+zzsRf69DvFL3W5BB9E\nHoe/0Q3IW0RLHFrQ8hVcn/SeN7mvikfaNY2KN/Q8eQKBgHgOW47cQfH3Wf6XfTMQ\nqDebU9wd0ss8YIXhwjaPt7MBUe36mzyOHouva8+tnd/Lwh7H80dGeX2bO9MUZmr6\nJhIwvzr47yYEds/V0CtB72iGkfYjaWyD4aFXy8iNiPGtdMpOK5Nfd/cnxlg5SxR1\nj0SPWDoIFA+Sb/174trXSeSC\n-----END PRIVATE KEY-----\n",
+  "client_email": "bidmarkit-bucket-access@utility-melody-419616.iam.gserviceaccount.com",
+  "client_id": "111893686178520712884",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/bidmarkit-bucket-access%40utility-melody-419616.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}
