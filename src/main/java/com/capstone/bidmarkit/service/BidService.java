@@ -3,7 +3,6 @@ package com.capstone.bidmarkit.service;
 import com.capstone.bidmarkit.domain.*;
 import com.capstone.bidmarkit.dto.AddBidRequest;
 import com.capstone.bidmarkit.dto.BidResponse;
-import com.capstone.bidmarkit.dto.ProductBriefResponse;
 import com.capstone.bidmarkit.repository.AutoBidRepository;
 import com.capstone.bidmarkit.repository.BidRepository;
 import com.capstone.bidmarkit.repository.ProductRepository;
@@ -13,10 +12,6 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-import org.antlr.v4.runtime.Token;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.support.PageableExecutionUtils;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -44,7 +39,7 @@ public class BidService {
         String requestMemberId = tokenService.getMemberId(token);
 
         // 본인 상품을 자동 입찰 시도 시, 예외 발생
-        if(product.getMemberId() == requestMemberId)
+        if(product.getMemberId().equals(requestMemberId))
             throw new IllegalArgumentException("You can't bid for your product yourself.");
 
         // 입찰 대상의 최소 상회 입찰가보다 낮은 가격으로 입찰 시도 시, 예외 발생
