@@ -1,16 +1,15 @@
 package com.capstone.bidmarkit.service;
 
 import com.capstone.bidmarkit.domain.*;
-import com.capstone.bidmarkit.dto.AddProductRequest;
-import com.capstone.bidmarkit.dto.ProductBriefResponse;
-import com.capstone.bidmarkit.dto.ProductDetailResponse;
+import com.capstone.bidmarkit.dto.*;
 import com.capstone.bidmarkit.repository.BidRepository;
 import com.capstone.bidmarkit.repository.ProductImgRepository;
 import com.capstone.bidmarkit.repository.ProductRepository;
 import com.google.cloud.storage.BlobInfo;
 import com.google.cloud.storage.Storage;
-import com.google.cloud.storage.StorageOptions;
+import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.Projections;
+import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -36,7 +35,6 @@ public class ProductService {
     private final ProductRepository productRepository;
     private final ProductImgRepository productImgRepository;
     private final BidRepository bidRepository;
-    private final TokenService tokenService;
     private final Storage storage;
 
     @Value("${spring.cloud.gcp.storage.bucket}")
@@ -46,7 +44,7 @@ public class ProductService {
     private EntityManager entityManager;
 
     @Transactional
-    public Product save(String memberId, AddProductRequest dto) throws IOException {
+    public AddProductResponse save(String memberId, AddProductRequest dto) throws IOException {
         Product newProduct = productRepository.save(
                 Product.builder()
                         .memberId(memberId)
@@ -81,7 +79,7 @@ public class ProductService {
         }
 
         newProduct.setImages(images);
-        return newProduct;
+        return new AddProductResponse(newProduct.getId());
     }
 
     public Page<ProductBriefResponse> findAllOrderByDeadlineAsc(Pageable pageable) {
@@ -107,6 +105,58 @@ public class ProductService {
         return PageableExecutionUtils.getPage(results, pageable, queryFactory.select(product.count()).from(product)::fetchCount);
     }
 
+    public Page<GetPurchaseResponse> findAllPurchased(String memberId, Pageable pageable) {
+        JPAQueryFactory queryFactory = new JPAQueryFactory(entityManager);
+        QProduct product = QProduct.product;
+        QProductImg productImg = QProductImg.productImg;
+        QTrade trade = QTrade.trade;
+
+        List<GetPurchaseResponse> results = queryFactory
+                .select(
+                        Projections.constructor(
+                                GetPurchaseResponse.class,
+                                productImg.imgUrl, product.name, product.id, trade.price.avg().intValue())
+                )
+                .from(trade)
+                .where(trade.buyerId.eq(memberId))
+                .leftJoin(trade.product, product)
+                .leftJoin(product.images, productImg)
+                .groupBy(product.id, productImg.imgUrl)
+                .where(productImg.isThumbnail.isTrue())
+                .offset(pageable.getOffset())
+                .limit(pageable.getPageSize())
+                .fetch();
+
+        return PageableExecutionUtils.getPage(results, pageable, queryFactory.select(trade.count()).from(trade).where(trade.buyerId.eq(memberId))::fetchCount);
+    }
+
+    public Page<GetSaleResponse> findAllSale(String memberId, int state, Pageable pageable) {
+        JPAQueryFactory queryFactory = new JPAQueryFactory(entityManager);
+        QProduct product = QProduct.product;
+        QProductImg productImg = QProductImg.productImg;
+
+        BooleanBuilder whereClause = new BooleanBuilder(product.memberId.eq(memberId));
+        if(state != 4) whereClause.and(product.state.eq(state));
+
+        List<GetSaleResponse> results = queryFactory
+                .select(
+                        Projections.constructor(
+                                GetSaleResponse.class,
+                                productImg.imgUrl, product.name, product.id,
+                                product.bidPrice, product.state)
+                )
+                .from(product)
+                .where(whereClause)
+                .leftJoin(product.images, productImg)
+                .groupBy(product.id, productImg.imgUrl)
+                .where(productImg.isThumbnail.isTrue())
+                .offset(pageable.getOffset())
+                .limit(pageable.getPageSize())
+                .fetch();
+
+        return PageableExecutionUtils.getPage(results, pageable, queryFactory.select(product.count()).from(product).where(whereClause)::fetchCount);
+    }
+
     public ProductDetailResponse findDetail(int productId) {
         ProductDetailResponse res = new ProductDetailResponse();
 
@@ -130,7 +180,7 @@ public class ProductService {
     }
 
     @Transactional
-    public void purchaseProduct(String token, int productId) {
+    public void purchaseProduct(String memberId, int productId) {
         Product product = productRepository.findById(productId).orElseThrow(() -> new IllegalArgumentException("Product not found"));
 
         // 상품 상태가 판매 중이 아닐 경우, 예외 발생
@@ -141,7 +191,7 @@ public class ProductService {
         product.setBidPrice(product.getPrice());
         bidRepository.save(Bid.builder()
                 .productId(productId)
-                .memberId(tokenService.getMemberId(token))
+                .memberId(memberId)
                 .price(product.getPrice())
                 .build()
         );

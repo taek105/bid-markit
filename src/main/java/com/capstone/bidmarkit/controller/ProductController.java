@@ -19,9 +19,8 @@ public class ProductController {
     private final TokenService tokenService;
 
     @PostMapping("/products")
-    public ResponseEntity<Void> enrollProduct(@RequestHeader(name="Authorization") String token, AddProductRequest request) throws IOException {
-        productService.save(tokenService.getMemberId(token.substring(7)), request);
-        return ResponseEntity.ok().build();
+    public ResponseEntity<AddProductResponse> enrollProduct(@RequestHeader(name="Authorization") String token, AddProductRequest request) throws IOException {
+        return ResponseEntity.ok().body(productService.save(tokenService.getMemberId(token.substring(7)), request));
     }
 
     @GetMapping("/products")
@@ -36,7 +35,21 @@ public class ProductController {
 
     @PostMapping("/purchase")
     public ResponseEntity<Void> purchase(@RequestHeader(name="Authorization") String token, @RequestBody PurchaseRequest request) {
-        productService.purchaseProduct(token.substring(7), request.getProductId());
+        productService.purchaseProduct(tokenService.getMemberId(token.substring(7)), request.getProductId());
         return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/purchase")
+    public ResponseEntity<Page<GetPurchaseResponse>> getPurchase(
+            @RequestHeader(name="Authorization") String token, @RequestParam int pageNum, @RequestParam int size
+    ) {
+        return ResponseEntity.ok().body(productService.findAllPurchased(tokenService.getMemberId(token.substring(7)), PageRequest.of(pageNum, size)));
+    }
+
+    @GetMapping("/sale")
+    public ResponseEntity<Page<GetSaleResponse>> getSale(
+            @RequestHeader(name="Authorization") String token, @RequestParam(required = false) Integer state, @RequestParam int pageNum, @RequestParam int size
+    ) {
+        return ResponseEntity.ok().body(productService.findAllSale(tokenService.getMemberId(token.substring(7)), state == null ? 4 : state.intValue(), PageRequest.of(pageNum, size)));
     }
 }
