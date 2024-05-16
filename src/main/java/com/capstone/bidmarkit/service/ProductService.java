@@ -45,6 +45,9 @@ public class ProductService {
 
     @Transactional
     public AddProductResponse save(String memberId, AddProductRequest dto) throws IOException {
+        if(dto.getInitPrice() > dto.getPrice())
+            throw new IllegalArgumentException("Init price should be higher than Instant purchase price");
+
         Product newProduct = productRepository.save(
                 Product.builder()
                         .memberId(memberId)
