@@ -136,7 +136,7 @@ public class ProductService {
         QProductImg productImg = QProductImg.productImg;
 
         BooleanBuilder whereClause = new BooleanBuilder(product.memberId.eq(memberId));
-        if(state != 4) whereClause.and(product.state.eq(state));
+        if(0 <= state && state < 4) whereClause.and(product.state.eq(state));
 
         List<GetSaleResponse> results = queryFactory
                 .select(
