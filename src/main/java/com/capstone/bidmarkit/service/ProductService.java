@@ -9,7 +9,6 @@ import com.google.cloud.storage.BlobInfo;
 import com.google.cloud.storage.Storage;
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.Projections;
-import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -34,6 +33,7 @@ import java.util.stream.Collectors;
 public class ProductService {
     private final ProductRepository productRepository;
     private final ProductImgRepository productImgRepository;
+
     private final BidRepository bidRepository;
     private final Storage storage;
 
@@ -163,21 +163,21 @@ public class ProductService {
     public ProductDetailResponse findDetail(int productId) {
         ProductDetailResponse res = new ProductDetailResponse();
 
-        Product a = productRepository.findDetailById(productId);
+        Product findProduct = productRepository.findDetailById(productId);
 
         res.setImages(productImgRepository.findByProductId(productId)
                 .stream()
                 .map(ProductImg::getImgUrl)
                 .collect(Collectors.toList()));
-        res.setProductName(a.getName());
-        res.setCategory(a.getCategory());
-        res.setBidPrice(a.getBidPrice());
-        res.setInitPrice(a.getInitPrice());
-        res.setPrice(a.getPrice());
-        res.setState(a.getState());
-        res.setDeadline(a.getDeadline());
-        res.setSellerName(a.getMemberId());
-        res.setContent(a.getContent());
+        res.setProductName(findProduct.getName());
+        res.setCategory(findProduct.getCategory());
+        res.setBidPrice(findProduct.getBidPrice());
+        res.setInitPrice(findProduct.getInitPrice());
+        res.setPrice(findProduct.getPrice());
+        res.setState(findProduct.getState());
+        res.setDeadline(findProduct.getDeadline());
+        res.setSellerName(findProduct.getMemberId());
+        res.setContent(findProduct.getContent());
 
         return res;
     }
