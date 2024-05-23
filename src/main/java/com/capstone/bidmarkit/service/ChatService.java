@@ -11,7 +11,6 @@ import org.springframework.stereotype.Service;
 public class ChatService {
     private final ChatMessageRepository chatMessageRepository;
 
-
     public ChatMessage save(SendChatRequest request) {
         return chatMessageRepository.save(
                 ChatMessage.builder()
