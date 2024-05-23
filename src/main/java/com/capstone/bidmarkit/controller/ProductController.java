@@ -41,8 +41,7 @@ public class ProductController {
 
     @GetMapping("/purchase")
     public ResponseEntity<Page<GetPurchaseResponse>> getPurchase(
-            @RequestHeader(name="Authorization") String token, @RequestParam int pageNum, @RequestParam int size
-    ) {
+            @RequestHeader(name="Authorization") String token, @RequestParam int pageNum, @RequestParam int size ) {
         return ResponseEntity.ok().body(productService.findAllPurchased(tokenService.getMemberId(token.substring(7)), PageRequest.of(pageNum, size)));
     }
 
