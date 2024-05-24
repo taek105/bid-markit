@@ -9,11 +9,13 @@ import java.util.List;
 @Setter
 public class ChatRoomDetailResponse {
     private String thumbnail, productName;
+    private int price;
     private List<ChatLogResponse> log;
 
-    public ChatRoomDetailResponse(String thumbnail, String productName, List<ChatLogResponse> log) {
+    public ChatRoomDetailResponse(String thumbnail, String productName, int price, List<ChatLogResponse> log) {
         this.thumbnail = thumbnail;
         this.productName = productName;
+        this.price = price;
         this.log = log;
     }
 }

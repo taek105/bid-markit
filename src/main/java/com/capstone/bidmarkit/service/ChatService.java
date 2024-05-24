@@ -12,6 +12,11 @@ public class ChatService {
     private final ChatMessageRepository chatMessageRepository;
 
     public ChatMessage save(SendChatRequest request) {
+
+        /*
+         업데이트 쿼리 하나 날려서 ChatRoom에 updated_at 이벤트 발생하게 해야함
+        */
+
         return chatMessageRepository.save(
                 ChatMessage.builder()
                         .senderId(request.getSenderId())

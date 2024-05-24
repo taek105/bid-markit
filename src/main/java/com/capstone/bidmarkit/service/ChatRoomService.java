@@ -1,8 +1,6 @@
 package com.capstone.bidmarkit.service;
 
-import com.capstone.bidmarkit.domain.ChatRoom;
-import com.capstone.bidmarkit.domain.QChatMessage;
-import com.capstone.bidmarkit.domain.QChatRoom;
+import com.capstone.bidmarkit.domain.*;
 
 import com.capstone.bidmarkit.dto.*;
 import com.capstone.bidmarkit.repository.ChatRoomRepository;
@@ -33,29 +31,52 @@ public class ChatRoomService {
 
     @Transactional
     public ChatRoom save(String bidderId, AddChatRoomRequest request) {
-        ChatRoom newChatRoom = chatRoomRepository.save(
+        return chatRoomRepository.save(
                 ChatRoom.builder()
                         .productId(request.getProductId())
                         .sellerId(request.getSellerId())
                         .bidderId(bidderId)
                         .build()
         );
-        return newChatRoom;
     }
 
     public Page<ChatRoomListResponse> findAllRoomByMemberId(String memberId, Pageable pageable) {
         JPAQueryFactory queryFactory = new JPAQueryFactory(entityManager);
+
         QChatRoom chatRoom = QChatRoom.chatRoom;
+        QProductImg productImg = QProductImg.productImg;
+        QProduct product = QProduct.product;
 
         List<ChatRoomListResponse> results = queryFactory
-                .select(Projections.constructor(ChatRoomListResponse.class, chatRoom.id, chatRoom.sellerId, chatRoom.bidderId, chatRoom.updatedAt))
+                .select(Projections.constructor
+                            (ChatRoomListResponse.class,
+                                chatRoom.id,
+                                chatRoom.sellerId,
+                                chatRoom.bidderId,
+                                productImg.imgUrl,
+                                product.name,
+                                chatRoom.updatedAt
+                            )
+                        )
                 .from(chatRoom)
-                .where(chatRoom.sellerId.eq(memberId).or(chatRoom.bidderId.eq(memberId))) // sellerId 또는 bidderId가 memberId와 일치하는 경우
+                .leftJoin(productImg).on(chatRoom.productId.eq(productImg.product.id)
+                        .and(productImg.isThumbnail.isTrue()))
+                .leftJoin(product).on(chatRoom.productId.eq(product.id))
+                .where(chatRoom.sellerId.eq(memberId).or(chatRoom.bidderId.eq(memberId)))
                 .orderBy(chatRoom.updatedAt.desc())
+                .offset(pageable.getOffset())
+                .limit(pageable.getPageSize())
                 .fetch();
 
-        return PageableExecutionUtils.getPage(results, pageable, queryFactory.select(chatRoom.count()).from(chatRoom)::fetchCount);
+        long total = queryFactory
+                .select(chatRoom.count())
+                .from(chatRoom)
+                .where(chatRoom.sellerId.eq(memberId).or(chatRoom.bidderId.eq(memberId)))
+                .fetchCount();
+
+        return PageableExecutionUtils.getPage(results, pageable, () -> total);
     }
+
     public ChatRoomDetailResponse findChatDetailsByRoomId(int roomId) {
         JPAQueryFactory queryFactory = new JPAQueryFactory(entityManager);
         QChatMessage chatMessage = QChatMessage.chatMessage;
@@ -71,7 +92,8 @@ public class ChatRoomService {
         int productId = chatRoomRepository.findProductIdById(roomId);
         List<String> imgUrls = productImgRepository.findImgUrlsByProductId(productId);
         String productName = productRepository.findProductNameById(productId);
+        int price = productRepository.findPriceById(productId);
 
-        return new ChatRoomDetailResponse(imgUrls.get(0), productName, results);
+        return new ChatRoomDetailResponse(imgUrls.get(0), productName, price, results);
     }
 }

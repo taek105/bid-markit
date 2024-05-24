@@ -23,8 +23,8 @@ public class ChatRoomController {
     @PostMapping("/chatRooms")
     public ResponseEntity<ChatRoom> createRoom(@RequestHeader(name="Authorization") String token, @RequestBody AddChatRoomRequest request) {
         return ResponseEntity.ok().body(chatRoomService.save(tokenService.getMemberId(token.substring(7)), request));
-
     }
+
     @GetMapping("/chatRooms")
     public ResponseEntity<Page<ChatRoomListResponse>> getChatRoomList(@RequestHeader(name="Authorization") String token , @RequestParam int pageNum, @RequestParam int size) {
         return ResponseEntity.ok().body(chatRoomService.findAllRoomByMemberId(tokenService.getMemberId(token.substring(7)), PageRequest.of(pageNum, size)));
