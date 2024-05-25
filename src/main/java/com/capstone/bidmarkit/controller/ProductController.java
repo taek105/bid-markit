@@ -1,6 +1,7 @@
 package com.capstone.bidmarkit.controller;
 
 import com.capstone.bidmarkit.dto.*;
+import com.capstone.bidmarkit.service.HLRestProductService;
 import com.capstone.bidmarkit.service.ProductService;
 import com.capstone.bidmarkit.service.TokenService;
 import lombok.RequiredArgsConstructor;
@@ -11,11 +12,13 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
+import java.util.List;
 
 @RequiredArgsConstructor
 @Controller
 public class ProductController {
     private final ProductService productService;
+    private final HLRestProductService hlRestProductService;
     private final TokenService tokenService;
 
     @PostMapping("/products")
@@ -46,9 +49,19 @@ public class ProductController {
     }
 
     @GetMapping("/sale")
-    public ResponseEntity<Page<GetSaleResponse>> getSale(
+    public ResponseEntity<Page<ProductBriefResponse>> getSale(
             @RequestHeader(name="Authorization") String token, @RequestParam(required = false) Integer state, @RequestParam int pageNum, @RequestParam int size
     ) {
         return ResponseEntity.ok().body(productService.findAllSale(tokenService.getMemberId(token.substring(7)), state == null ? 4 : state.intValue(), PageRequest.of(pageNum, size)));
+    }
+
+    @GetMapping("/suggest/keywords")
+    public ResponseEntity<List<String>> suggestKeywords(@RequestParam String keyword) throws IOException {
+        return ResponseEntity.ok().body(hlRestProductService.suggestKeywords(keyword));
+    }
+
+    @GetMapping("/search/product")
+    public ResponseEntity<Page<ElasticProduct>> search(@RequestParam String keyword, @RequestParam int pageNum, @RequestParam int size) throws IOException {
+        return ResponseEntity.ok().body(productService.findAllByKeyword(keyword, PageRequest.of(pageNum, size)));
     }
 }

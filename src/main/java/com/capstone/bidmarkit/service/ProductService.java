@@ -1,5 +1,9 @@
 package com.capstone.bidmarkit.service;
 
+import co.elastic.clients.elasticsearch.ElasticsearchClient;
+import co.elastic.clients.elasticsearch.core.SearchRequest;
+import co.elastic.clients.elasticsearch.core.SearchResponse;
+import co.elastic.clients.elasticsearch.core.search.Hit;
 import com.capstone.bidmarkit.domain.*;
 import com.capstone.bidmarkit.dto.*;
 import com.capstone.bidmarkit.repository.BidRepository;
@@ -16,6 +20,7 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.support.PageableExecutionUtils;
 import org.springframework.stereotype.Service;
@@ -33,9 +38,9 @@ import java.util.stream.Collectors;
 public class ProductService {
     private final ProductRepository productRepository;
     private final ProductImgRepository productImgRepository;
-
     private final BidRepository bidRepository;
     private final Storage storage;
+    private final ElasticsearchClient client;
 
     @Value("${spring.cloud.gcp.storage.bucket}")
     private String bucketName;
@@ -133,7 +138,7 @@ public class ProductService {
         return PageableExecutionUtils.getPage(results, pageable, queryFactory.select(trade.count()).from(trade).where(trade.buyerId.eq(memberId))::fetchCount);
     }
 
-    public Page<GetSaleResponse> findAllSale(String memberId, int state, Pageable pageable) {
+    public Page<ProductBriefResponse> findAllSale(String memberId, int state, Pageable pageable) {
         JPAQueryFactory queryFactory = new JPAQueryFactory(entityManager);
         QProduct product = QProduct.product;
         QProductImg productImg = QProductImg.productImg;
@@ -141,12 +146,12 @@ public class ProductService {
         BooleanBuilder whereClause = new BooleanBuilder(product.memberId.eq(memberId));
         if(0 <= state && state < 4) whereClause.and(product.state.eq(state));
 
-        List<GetSaleResponse> results = queryFactory
+        List<ProductBriefResponse> results = queryFactory
                 .select(
                         Projections.constructor(
-                                GetSaleResponse.class,
-                                productImg.imgUrl, product.name, product.id,
-                                product.bidPrice, product.state)
+                                ProductBriefResponse.class,
+                                productImg.imgUrl, product.name, product.category, product.id,
+                                product.bidPrice, product.price, product.state, product.deadline)
                 )
                 .from(product)
                 .where(whereClause)
@@ -198,5 +203,30 @@ public class ProductService {
                 .price(product.getPrice())
                 .build()
         );
+    }
+
+    public Page<ElasticProduct> findAllByKeyword(String keywords, Pageable pageable) throws IOException {
+        SearchRequest searchRequest = new SearchRequest.Builder()
+                .index("products")
+                .query(q -> q
+                        .multiMatch(m -> m
+                                .query(keywords)
+                                .fields("product_name^2")
+                                .fields("content")
+                        )
+                )
+                .from(pageable.getPageNumber() * pageable.getPageSize())
+                .size(pageable.getPageSize())
+                .build();
+
+        SearchResponse response = client.search(searchRequest, ElasticProduct.class);
+        List<Hit<ElasticProduct>> hits = response.hits().hits();
+        List<ElasticProduct> products = new ArrayList<>();
+        for (Hit<ElasticProduct> hit : hits) {
+            ElasticProduct source = hit.source();
+            products.add(source);
+        }
+
+        return new PageImpl<>(products, pageable, hits.size());
     }
 }

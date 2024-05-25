@@ -60,7 +60,7 @@ public class WebSecurityConfig {
                 .httpBasic(auth -> auth.disable())
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.GET, "/products/**").permitAll()
-                        .requestMatchers("/login", "/member", "/accessToken", "/bids/**", "/error", "/").permitAll()
+                        .requestMatchers("/login", "/member", "/accessToken", "/bids/**", "/error", "/", "/suggest/keywords", "/search/product").permitAll()
                         .requestMatchers("/test").hasRole("MEMBER")
                         .anyRequest().authenticated())
                 .addFilterBefore(new TokenAuthenticationFilter(tokenProvider), LoginFilter.class)
