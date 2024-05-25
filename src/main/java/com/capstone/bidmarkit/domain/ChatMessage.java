@@ -35,7 +35,8 @@ public class ChatMessage {
     private LocalDateTime createdAt;
 
     @Builder
-    public ChatMessage(String senderId, String content) {
+    public ChatMessage(int chatRoomId, String senderId, String content) {
+        this.chatRoomId = chatRoomId;
         this.senderId = senderId;
         this.content = content;
     }

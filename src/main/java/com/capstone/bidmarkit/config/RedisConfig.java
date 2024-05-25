@@ -47,6 +47,6 @@ public class RedisConfig {
 
     @Bean
     public ChannelTopic topic() {
-        return new ChannelTopic("bidmaKitChatRoom");
+        return new ChannelTopic("bidmarKitChatRoom");
     }
 }

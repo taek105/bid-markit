@@ -3,6 +3,7 @@ package com.capstone.bidmarkit.service;
 import com.capstone.bidmarkit.domain.*;
 import com.capstone.bidmarkit.dto.SendChatRequest;
 import com.capstone.bidmarkit.repository.ChatMessageRepository;
+import com.capstone.bidmarkit.repository.ChatRoomRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -10,15 +11,15 @@ import org.springframework.stereotype.Service;
 @Service
 public class ChatService {
     private final ChatMessageRepository chatMessageRepository;
+    private final ChatRoomRepository chatRoomRepository;
 
     public ChatMessage save(SendChatRequest request) {
 
-        /*
-         업데이트 쿼리 하나 날려서 ChatRoom에 updated_at 이벤트 발생하게 해야함
-        */
+        chatRoomRepository.updateUpdatedAt(request.getChatRoomId());
 
         return chatMessageRepository.save(
                 ChatMessage.builder()
+                        .chatRoomId(request.getChatRoomId())
                         .senderId(request.getSenderId())
                         .content(request.getContent())
                         .build()
