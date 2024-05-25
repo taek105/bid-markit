@@ -59,7 +59,7 @@ public class WebSecurityConfig {
                 .httpBasic(auth -> auth.disable())
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.GET, "/products/**").permitAll()
-                        .requestMatchers("/login", "/member", "/accessToken", "/bids/**", "/error", "/").permitAll()
+                        .requestMatchers("/login", "/member", "/accessToken", "/bids/**", "/error", "/", "/suggest/keywords", "/search/products").permitAll()
                         .requestMatchers("/ws-stomp/**").permitAll() // 게이트웨이 거치지 않고 직접 인증
                         .requestMatchers("/test").hasRole("MEMBER")
                         .anyRequest().authenticated())

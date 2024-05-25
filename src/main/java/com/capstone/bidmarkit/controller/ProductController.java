@@ -60,8 +60,8 @@ public class ProductController {
         return ResponseEntity.ok().body(hlRestProductService.suggestKeywords(keyword));
     }
 
-    @GetMapping("/search/product")
+    @GetMapping("/search/products")
     public ResponseEntity<Page<ElasticProduct>> search(@RequestParam String keyword, @RequestParam int pageNum, @RequestParam int size) throws IOException {
-        return ResponseEntity.ok().body(productService.findAllByKeyword(keyword, PageRequest.of(pageNum, size)));
+        return ResponseEntity.ok().body(hlRestProductService.findAllByKeyword(keyword, PageRequest.of(pageNum, size)));
     }
 }

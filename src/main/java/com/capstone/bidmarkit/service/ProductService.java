@@ -204,29 +204,4 @@ public class ProductService {
                 .build()
         );
     }
-
-    public Page<ElasticProduct> findAllByKeyword(String keywords, Pageable pageable) throws IOException {
-        SearchRequest searchRequest = new SearchRequest.Builder()
-                .index("products")
-                .query(q -> q
-                        .multiMatch(m -> m
-                                .query(keywords)
-                                .fields("product_name^2")
-                                .fields("content")
-                        )
-                )
-                .from(pageable.getPageNumber() * pageable.getPageSize())
-                .size(pageable.getPageSize())
-                .build();
-
-        SearchResponse response = client.search(searchRequest, ElasticProduct.class);
-        List<Hit<ElasticProduct>> hits = response.hits().hits();
-        List<ElasticProduct> products = new ArrayList<>();
-        for (Hit<ElasticProduct> hit : hits) {
-            ElasticProduct source = hit.source();
-            products.add(source);
-        }
-
-        return new PageImpl<>(products, pageable, hits.size());
-    }
 }
