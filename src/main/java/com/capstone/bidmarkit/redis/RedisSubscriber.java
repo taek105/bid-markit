@@ -20,12 +20,10 @@ public class RedisSubscriber implements MessageListener {
     @Override
     public void onMessage(Message message, byte[] pattern) {
         try {
-            // redis 에서 발행된 데이터를 받아 역직렬화
-            String publishMessage = (String) rT.getStringSerializer().deserialize(message.getBody());
+            String publishMessage = rT.getStringSerializer().deserialize(message.getBody());
 
             SendChatRequest sendChatRequest = objectMapper.readValue(publishMessage, SendChatRequest.class);
 
-            // Websocket 구독자에게 채팅 메시지 전송
             mT.convertAndSend("/sub/chatRooms/" + sendChatRequest.getChatRoomId(), sendChatRequest);
         } catch (Exception e) {
             System.out.println("onMessage Error: " + e.getMessage());
