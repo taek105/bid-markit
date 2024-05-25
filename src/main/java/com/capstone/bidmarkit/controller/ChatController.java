@@ -16,7 +16,7 @@ public class ChatController {
 
     @MessageMapping("/chat/message")
     public void message(SendChatRequest request) {
-        redisPublisher.publish("bidmaKitChatRoom", request);
+        redisPublisher.publish("bidmarKitChatRoom", request);
 
         chatService.save(request);
     }
