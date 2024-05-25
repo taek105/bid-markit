@@ -4,8 +4,7 @@ import com.capstone.bidmarkit.config.jwt.LoginFilter;
 import com.capstone.bidmarkit.config.jwt.TokenAuthenticationFilter;
 import com.capstone.bidmarkit.config.jwt.TokenProvider;
 import com.capstone.bidmarkit.service.RefreshTokenService;
-import com.google.cloud.storage.Storage;
-import com.google.cloud.storage.StorageOptions;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -61,6 +60,7 @@ public class WebSecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.GET, "/products/**").permitAll()
                         .requestMatchers("/login", "/member", "/accessToken", "/bids/**", "/error", "/").permitAll()
+                        .requestMatchers("/ws-stomp/**").permitAll() // 게이트웨이 거치지 않고 직접 인증
                         .requestMatchers("/test").hasRole("MEMBER")
                         .anyRequest().authenticated())
                 .addFilterBefore(new TokenAuthenticationFilter(tokenProvider), LoginFilter.class)
