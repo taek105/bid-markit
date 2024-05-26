@@ -41,15 +41,19 @@ public class RedisConfig {
 
     @Bean
     public RedisMessageListenerContainer redisMessageListenerContainer(RedisConnectionFactory redisConnectionFactory,
-                                                                       MessageListenerAdapter listenerAdapter) {
+                                                                       MessageListenerAdapter listenerAdapter,
+                                                                       ChannelTopic channelTopic) {
         RedisMessageListenerContainer container = new RedisMessageListenerContainer();
         container.setConnectionFactory(redisConnectionFactory);
-        container.addMessageListener(listenerAdapter, new ChannelTopic("bidmarKitChatRoom"));
+        container.addMessageListener(listenerAdapter, channelTopic);
         return container;
     }
     @Bean
     public MessageListenerAdapter listenerAdapter(RedisSubscriber subscriber) {
         return new MessageListenerAdapter(subscriber, "onMessage");
     }
-
+    @Bean
+    public ChannelTopic channelTopic() {
+        return new ChannelTopic("bidmarKitChatRoom");
+    }
 }
