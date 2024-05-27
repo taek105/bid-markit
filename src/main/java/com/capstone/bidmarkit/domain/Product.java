@@ -29,7 +29,7 @@ public class Product {
     private String name;
 
     @Column(name = "category")
-    private String category;
+    private Integer category;
 
     @Column(name = "state")
     private Integer state;
@@ -61,7 +61,7 @@ public class Product {
     private LocalDateTime updatedAt;
 
     @Builder
-    public Product(int id, String memberId, String name, String category, String content, int initPrice, int price, LocalDateTime deadline) {
+    public Product(int id, String memberId, String name, Integer category, String content, int initPrice, int price, LocalDateTime deadline) {
         this.id = id;
         this.memberId = memberId;
         this.name = name;

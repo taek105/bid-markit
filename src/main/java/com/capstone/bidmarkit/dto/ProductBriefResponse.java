@@ -8,7 +8,7 @@ import java.time.LocalDateTime;
 @Getter
 @AllArgsConstructor
 public class ProductBriefResponse {
-    String thumbnail, productName, category;
-    Integer productId, bidPrice, price, state;
+    String thumbnail, productName;
+    Integer category, productId, bidPrice, price, state;
     LocalDateTime deadline;
 }

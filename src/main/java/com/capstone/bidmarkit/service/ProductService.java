@@ -1,9 +1,6 @@
 package com.capstone.bidmarkit.service;
 
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
-import co.elastic.clients.elasticsearch.core.SearchRequest;
-import co.elastic.clients.elasticsearch.core.SearchResponse;
-import co.elastic.clients.elasticsearch.core.search.Hit;
 import com.capstone.bidmarkit.domain.*;
 import com.capstone.bidmarkit.dto.*;
 import com.capstone.bidmarkit.repository.BidRepository;
@@ -20,7 +17,6 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.support.PageableExecutionUtils;
 import org.springframework.stereotype.Service;
@@ -28,6 +24,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -41,6 +38,7 @@ public class ProductService {
     private final BidRepository bidRepository;
     private final Storage storage;
     private final ElasticsearchClient client;
+    private final HistoryService historyService;
 
     @Value("${spring.cloud.gcp.storage.bucket}")
     private String bucketName;
@@ -61,7 +59,7 @@ public class ProductService {
                         .content(dto.getContent())
                         .initPrice(dto.getInitPrice())
                         .price(dto.getPrice())
-                        .deadline(LocalDateTime.now().plusDays(dto.getDeadline()))
+                        .deadline(LocalDateTime.now().truncatedTo(ChronoUnit.HOURS).plusDays(dto.getDeadline()))
                         .build()
         );
 
@@ -165,10 +163,12 @@ public class ProductService {
         return PageableExecutionUtils.getPage(results, pageable, queryFactory.select(product.count()).from(product).where(whereClause)::fetchCount);
     }
 
-    public ProductDetailResponse findDetail(int productId) {
+    public ProductDetailResponse findDetail(String memberId, int productId) {
         ProductDetailResponse res = new ProductDetailResponse();
 
         Product findProduct = productRepository.findDetailById(productId);
+
+        if(!memberId.isEmpty()) historyService.upsertSearchHistory(memberId, findProduct.getName(), findProduct.getCategory());
 
         res.setImages(productImgRepository.findByProductId(productId)
                 .stream()
@@ -184,6 +184,8 @@ public class ProductService {
         res.setSellerName(findProduct.getMemberId());
         res.setContent(findProduct.getContent());
 
+        historyService.showSearchHistory(memberId);
+
         return res;
     }
 
@@ -194,6 +196,8 @@ public class ProductService {
         // 상품 상태가 판매 중이 아닐 경우, 예외 발생
         if(product.getState() != 0)
             throw new IllegalArgumentException("It is not a purchasable product");
+
+        historyService.upsertBidHistory(memberId, product.getName(), product.getCategory());
 
         product.setState(1);
         product.setBidPrice(product.getPrice());

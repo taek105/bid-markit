@@ -22,7 +22,7 @@ public class QProduct extends EntityPathBase<Product> {
 
     public final NumberPath<Integer> bidPrice = createNumber("bidPrice", Integer.class);
 
-    public final StringPath category = createString("category");
+    public final NumberPath<Integer> category = createNumber("category", Integer.class);
 
     public final StringPath content = createString("content");
 

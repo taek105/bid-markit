@@ -32,8 +32,10 @@ public class ProductController {
     }
 
     @GetMapping("/products/{productId}")
-    public ResponseEntity<ProductDetailResponse> getDetail(@PathVariable int productId) {
-        return ResponseEntity.ok().body(productService.findDetail(productId));
+    public ResponseEntity<ProductDetailResponse> getDetail(
+            @RequestHeader(name="Authorization", required = false) String token, @PathVariable int productId) {
+        String memberId = token == null ? "" : tokenService.getMemberId(token.substring(7));
+        return ResponseEntity.ok().body(productService.findDetail(memberId, productId));
     }
 
     @PostMapping("/purchase")

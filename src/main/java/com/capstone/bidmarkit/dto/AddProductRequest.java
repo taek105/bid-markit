@@ -11,7 +11,7 @@ import java.util.List;
 @AllArgsConstructor
 public class AddProductRequest {
     private String productName;
-    private String category;
+    private Integer category;
     private String content;
     private int initPrice;
     private int price;
