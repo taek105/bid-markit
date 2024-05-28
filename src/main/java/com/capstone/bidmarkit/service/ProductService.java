@@ -34,6 +34,7 @@ import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -259,6 +260,7 @@ public class ProductService {
             List<Hit<ElasticProduct>> hits = response.hits().hits();
             res.addAll(hits.stream().map(ProductBriefResponse::from).toList());
         }
+//        Collections.shuffle(res);
 
         return res;
     }
