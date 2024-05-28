@@ -244,6 +244,7 @@ public class ProductService {
                     new SearchRequest.Builder()
                             .index("products")
                             .query(queryBuilder -> queryBuilder.match(term -> term.field("state").query(0)))
+                            .size(SEARCH_SIZE)
                             .sort(so -> so
                                     .field(FieldSort.of(f -> f
                                             .field("deadline")

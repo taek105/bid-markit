@@ -14,9 +14,12 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 @RequiredArgsConstructor
 @Service
@@ -53,15 +56,16 @@ public class HLRestProductService {
         List<ProductBriefResponse> products = new ArrayList<>();
 
         response.getHits().forEach(hit -> {
+            Map<String, Object> map = hit.getSourceAsMap();
             ProductBriefResponse found = ProductBriefResponse.builder()
-                    .productId(Integer.parseInt(hit.getSourceAsMap().get("product_id").toString()))
-                    .productName(hit.getSourceAsMap().get("product_name").toString())
-                    .thumbnail(hit.getSourceAsMap().get("thumbnail").toString())
-                    .category(Integer.parseInt(hit.getSourceAsMap().get("category").toString()))
-                    .price(Integer.parseInt(hit.getSourceAsMap().get("price").toString()))
-                    .bidPrice(Integer.parseInt(hit.getSourceAsMap().get("bid_price").toString()))
-                    .state(Integer.parseInt(hit.getSourceAsMap().get("state").toString()))
-                    .deadline(LocalDateTime.parse(hit.getSourceAsMap().get("deadline").toString()))
+                    .productId(Integer.parseInt(map.get("product_id").toString()))
+                    .productName(map.get("product_name").toString())
+                    .thumbnail(map.get("thumbnail").toString())
+                    .category(Integer.parseInt(map.get("category").toString()))
+                    .price(Integer.parseInt(map.get("price").toString()))
+                    .bidPrice(Integer.parseInt(map.get("bid_price").toString()))
+                    .state(Integer.parseInt(map.get("state").toString()))
+                    .deadline(Instant.parse((String) map.get("deadline")).atZone(ZoneId.of("UTC")).toLocalDateTime())
                     .build();
 
             products.add(found);
