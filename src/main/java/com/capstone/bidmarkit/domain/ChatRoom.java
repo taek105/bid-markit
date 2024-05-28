@@ -53,5 +53,14 @@ public class ChatRoom implements Serializable {
         this.sellerCheck = 0;
         this.bidderCheck = 0;
     }
+
+    public Byte setSellerCheck(Byte checkType) {
+        this.sellerCheck = checkType;
+        return this.sellerCheck;
+    }
+    public Byte setBidderCheck(Byte checkType) {
+        this.bidderCheck = checkType;
+        return this.sellerCheck;
+    }
 }
 

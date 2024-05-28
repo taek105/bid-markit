@@ -4,6 +4,7 @@ import com.capstone.bidmarkit.domain.ChatRoom;
 import com.capstone.bidmarkit.dto.AddChatRoomRequest;
 import com.capstone.bidmarkit.dto.ChatRoomDetailResponse;
 import com.capstone.bidmarkit.dto.ChatRoomListResponse;
+import com.capstone.bidmarkit.dto.UpdateCheckResponse;
 import com.capstone.bidmarkit.service.ChatRoomService;
 import com.capstone.bidmarkit.service.TokenService;
 import lombok.RequiredArgsConstructor;
@@ -36,4 +37,8 @@ public class ChatRoomController {
         return ResponseEntity.ok(chatDetails);
     }
 
+    @PutMapping("/chatRooms/{roomId}/check/{checkType}") // 수정된 부분
+    public ResponseEntity<UpdateCheckResponse> customerCheck(@RequestHeader(name="Authorization") String token, @PathVariable int roomId, @PathVariable int checkType) {
+        return ResponseEntity.ok(chatRoomService.updateCheck(tokenService.getMemberId(token.substring(7)), roomId, (byte) checkType));
+    }
 }
