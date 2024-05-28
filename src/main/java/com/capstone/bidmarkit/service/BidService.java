@@ -25,6 +25,7 @@ public class BidService {
     private final BidRepository bidRepository;
     private final AutoBidRepository autoBidRepository;
     private final ProductRepository productRepository;
+    private final HistoryService historyService;
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -44,6 +45,9 @@ public class BidService {
 
         // 입찰 대상의 최소 상회 입찰가보다 낮은 가격으로 입찰 시도 시, 예외 발생
         if(product.getBidPrice() + minBidPrice(product.getBidPrice()) >= dto.getPrice()) throw new IllegalArgumentException("Price to bid is not enough");
+
+        // 상품 입찰 내역 저장
+        historyService.upsertBidHistory(memberId, product.getName(), product.getCategory());
 
         // 입찰 정보 저장
         Bid newBid = bidRepository.save(

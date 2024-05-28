@@ -1,6 +1,14 @@
 package com.capstone.bidmarkit.service;
 
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
+import co.elastic.clients.elasticsearch._types.FieldSort;
+import co.elastic.clients.elasticsearch._types.SortOrder;
+import co.elastic.clients.elasticsearch._types.query_dsl.Like;
+import co.elastic.clients.elasticsearch._types.query_dsl.MoreLikeThisQuery;
+import co.elastic.clients.elasticsearch._types.query_dsl.QueryBuilders;
+import co.elastic.clients.elasticsearch.core.SearchRequest;
+import co.elastic.clients.elasticsearch.core.SearchResponse;
+import co.elastic.clients.elasticsearch.core.search.Hit;
 import com.capstone.bidmarkit.domain.*;
 import com.capstone.bidmarkit.dto.*;
 import com.capstone.bidmarkit.repository.BidRepository;
@@ -184,8 +192,6 @@ public class ProductService {
         res.setSellerName(findProduct.getMemberId());
         res.setContent(findProduct.getContent());
 
-        historyService.showSearchHistory(memberId);
-
         return res;
     }
 
@@ -207,5 +213,68 @@ public class ProductService {
                 .price(product.getPrice())
                 .build()
         );
+    }
+
+    public List<ProductBriefResponse> suggestProducts(String memberId) throws IOException {
+        final float BID_BOOST = 20F, SEARCH_BOOST = 10F;
+        final int SEARCH_SIZE = 40;
+
+        BidHistory bidHistory = historyService.getBidHistory(memberId);
+        SearchHistory searchHistory = historyService.getSearchHistory(memberId);
+
+        List<SearchRequest> requestList = new ArrayList<>();
+        if(bidHistory != null)
+            requestList.add(
+                new SearchRequest.Builder()
+                    .index("products")
+                    .query(queryBuilder -> queryBuilder.moreLikeThis(getMoreLikeThisQuery(bidHistory.getKeyword(), BID_BOOST)))
+                    .size(SEARCH_SIZE / 2)
+                    .build()
+            );
+        if(searchHistory != null)
+            requestList.add(
+                new SearchRequest.Builder()
+                    .index("products")
+                    .query(queryBuilder -> queryBuilder.moreLikeThis(getMoreLikeThisQuery(searchHistory.getKeyword(), SEARCH_BOOST)))
+                    .size(SEARCH_SIZE / 2)
+                    .build()
+            );
+        if (requestList.isEmpty())
+            requestList.add(
+                    new SearchRequest.Builder()
+                            .index("products")
+                            .query(queryBuilder -> queryBuilder.match(term -> term.field("state").query(0)))
+                            .sort(so -> so
+                                    .field(FieldSort.of(f -> f
+                                            .field("deadline")
+                                            .order(SortOrder.Asc))
+                                    ))
+                            .build()
+            );
+
+        List<ProductBriefResponse> res = new ArrayList<>();
+        for (SearchRequest request: requestList) {
+            SearchResponse<ElasticProduct> response = client.search(request, ElasticProduct.class);
+            List<Hit<ElasticProduct>> hits = response.hits().hits();
+            res.addAll(hits.stream().map(ProductBriefResponse::from).toList());
+        }
+
+        return res;
+    }
+
+    private MoreLikeThisQuery getMoreLikeThisQuery(List<String> keywords, float boost) {
+        final int MIN_TERM_FREQ = 2, MIN_WORD_LENGTH = 0, MIN_DOC_FREQ = 7;
+
+        List<Like> likeList = new ArrayList<>();
+        for (String keyword: keywords) likeList.add(new Like.Builder().text(keyword).build());
+
+        return QueryBuilders.moreLikeThis()
+                .fields("product_name", "content")
+                .like(likeList)
+                .minTermFreq(MIN_TERM_FREQ)
+                .minWordLength(MIN_WORD_LENGTH)
+                .minDocFreq(MIN_DOC_FREQ)
+                .boost(boost)
+                .build();
     }
 }
