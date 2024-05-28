@@ -63,7 +63,12 @@ public class ProductController {
     }
 
     @GetMapping("/search/products")
-    public ResponseEntity<Page<ElasticProduct>> search(@RequestParam String keyword, @RequestParam int pageNum, @RequestParam int size) throws IOException {
+    public ResponseEntity<Page<ProductBriefResponse>> search(@RequestParam String keyword, @RequestParam int pageNum, @RequestParam int size) throws IOException {
         return ResponseEntity.ok().body(hlRestProductService.findAllByKeyword(keyword, PageRequest.of(pageNum, size)));
+    }
+
+    @GetMapping("/suggest/products")
+    public ResponseEntity<List<ProductBriefResponse>> suggestProducts(@RequestHeader(name="Authorization") String token) throws IOException {
+        return ResponseEntity.ok().body(productService.suggestProducts(tokenService.getMemberId(token.substring(7))));
     }
 }

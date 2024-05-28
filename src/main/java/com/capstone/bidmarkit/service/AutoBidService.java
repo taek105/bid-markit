@@ -21,6 +21,7 @@ public class AutoBidService {
     private final AutoBidRepository autoBidRepository;
     private final BidRepository bidRepository;
     private final ProductRepository productRepository;
+    private final HistoryService historyService;
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -52,6 +53,9 @@ public class AutoBidService {
                 .ceilingPrice(dto.getCeilingPrice())
                 .memberId(memberId)
                 .build();
+
+        // 상품 입찰 내역 저장
+        historyService.upsertBidHistory(memberId, product.getName(), product.getCategory());
 
         // 기존 자동 입찰 설정이 없을 경우,
         if(currentAutoBid == null) {

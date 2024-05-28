@@ -8,7 +8,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Optional;
 
 @RequiredArgsConstructor
@@ -20,6 +19,8 @@ public class HistoryService {
 
     public void upsertSearchHistory(String memberId, String keyword, int category) {
         Optional<SearchHistory> found = searchHistoryRepository.findById(memberId);
+        if(found.isPresent() && found.get().getKeyword().contains(keyword)) return;
+
         SearchHistory newSearchHistory = SearchHistory.builder()
                 .memberId(memberId)
                 .keyword(new ArrayList<>())
@@ -54,18 +55,21 @@ public class HistoryService {
         bidHistoryRepository.save(newBidHistory);
     }
 
-    public void showSearchHistory(String memberId) {
+    public SearchHistory getSearchHistory(String memberId) {
         Optional<SearchHistory> found = searchHistoryRepository.findById(memberId);
         if(found.isPresent()) {
-            List<String> keywords = found.get().getKeyword();
-            List<Integer> categories = found.get().getCategory();
-
-            StringBuilder sb = new StringBuilder();
-            sb.append("keywords: ");
-            for (String keyword: keywords) sb.append(keyword).append(" ");
-            sb.append("\ncategories: ");
-            for (int category: categories) sb.append(category).append(" ");
-            System.out.println(sb);
+            return found.get();
         }
+
+        return null;
+    }
+
+    public BidHistory getBidHistory(String memberId) {
+        Optional<BidHistory> found = bidHistoryRepository.findById(memberId);
+        if(found.isPresent()) {
+            return found.get();
+        }
+
+        return null;
     }
 }
