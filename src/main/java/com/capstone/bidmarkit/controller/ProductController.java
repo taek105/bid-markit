@@ -46,7 +46,7 @@ public class ProductController {
 
     @GetMapping("/purchase")
     public ResponseEntity<Page<GetPurchaseResponse>> getPurchase(
-            @RequestHeader(name="Authorization") String token, @RequestParam int pageNum, @RequestParam int size ) {
+            @RequestHeader(name="Authorization") String token, @RequestParam int pageNum, @RequestParam int size) {
         return ResponseEntity.ok().body(productService.findAllPurchased(tokenService.getMemberId(token.substring(7)), PageRequest.of(pageNum, size)));
     }
 
@@ -63,12 +63,20 @@ public class ProductController {
     }
 
     @GetMapping("/search/products")
-    public ResponseEntity<Page<ProductBriefResponse>> search(@RequestParam String keyword, @RequestParam int pageNum, @RequestParam int size) throws IOException {
-        return ResponseEntity.ok().body(hlRestProductService.findAllByKeyword(keyword, PageRequest.of(pageNum, size)));
+    public ResponseEntity<Page<ProductBriefResponse>> search(
+            @RequestParam(required = false) String keywords, @RequestParam(defaultValue = "-1") Integer category,
+            @RequestParam(defaultValue = "0") Integer state, @RequestParam(defaultValue = "0") Integer sort,
+            @RequestParam int pageNum, @RequestParam int size
+    ) throws IOException {
+        return ResponseEntity.ok().body(
+                hlRestProductService.findAll(keywords, category, state, sort, PageRequest.of(pageNum, size))
+        );
     }
 
     @GetMapping("/suggest/products")
-    public ResponseEntity<List<ProductBriefResponse>> suggestProducts(@RequestHeader(name="Authorization") String token) throws IOException {
-        return ResponseEntity.ok().body(productService.suggestProducts(tokenService.getMemberId(token.substring(7))));
+    public ResponseEntity<Page<ProductBriefResponse>> suggestProducts(
+            @RequestHeader(name="Authorization") String token, @RequestParam int pageNum, @RequestParam int size
+    ) throws IOException {
+        return ResponseEntity.ok().body(productService.suggestProducts(tokenService.getMemberId(token.substring(7)), PageRequest.of(pageNum, size)));
     }
 }
