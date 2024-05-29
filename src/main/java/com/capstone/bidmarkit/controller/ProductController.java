@@ -57,6 +57,16 @@ public class ProductController {
         return ResponseEntity.ok().body(productService.findAllSale(tokenService.getMemberId(token.substring(7)), state == null ? 4 : state.intValue(), PageRequest.of(pageNum, size)));
     }
 
+    @PutMapping("/products/{productId}/failure")
+    public ResponseEntity<UpdateStateResponse> setFailureState(@PathVariable int productId) {
+        return ResponseEntity.ok().body(productService.updateProductState(productId, 2));
+    }
+
+    @PutMapping("/products/{productId}/success")
+    public ResponseEntity<UpdateStateResponse> setSuccessState(@PathVariable int productId) {
+        return ResponseEntity.ok().body(productService.updateProductState(productId, 3));
+    }
+
     @GetMapping("/suggest/keywords")
     public ResponseEntity<List<String>> suggestKeywords(@RequestParam String keyword) throws IOException {
         return ResponseEntity.ok().body(hlRestProductService.suggestKeywords(keyword));

@@ -7,7 +7,6 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-
 public class AddChatRoomRequest {
     private Integer productId;
     private String sellerId;

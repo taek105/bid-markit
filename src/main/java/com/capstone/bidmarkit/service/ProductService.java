@@ -35,7 +35,6 @@ import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -176,7 +175,7 @@ public class ProductService {
     public ProductDetailResponse findDetail(String memberId, int productId) {
         ProductDetailResponse res = new ProductDetailResponse();
 
-        Product findProduct = productRepository.findDetailById(productId);
+        Product findProduct = productRepository.findById(productId).orElseThrow(() -> new IllegalArgumentException("Product not found"));
 
         if(!memberId.isEmpty()) historyService.upsertSearchHistory(memberId, findProduct.getName(), findProduct.getCategory());
 
@@ -283,5 +282,17 @@ public class ProductService {
                 .minDocFreq(MIN_DOC_FREQ)
                 .boost(boost)
                 .build();
+    }
+
+    public UpdateStateResponse updateProductState(int productId, int state) {
+        Product res = productRepository.findById(productId).orElseThrow(() -> new IllegalArgumentException("Product not found"));
+
+        if ( 0 > state || state > 3 ) throw new IllegalArgumentException("Illegal state");
+
+        res.setState(state);
+
+        productRepository.save(res);
+
+        return new UpdateStateResponse(productId, res.getState());
     }
 }
