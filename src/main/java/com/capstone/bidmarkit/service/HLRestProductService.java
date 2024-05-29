@@ -8,6 +8,7 @@ import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.RestHighLevelClient;
 import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
+import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
 import org.elasticsearch.search.sort.SortOrder;
 import org.springframework.data.domain.Page;
@@ -51,7 +52,9 @@ public class HLRestProductService {
         SearchRequest searchRequest = new SearchRequest("products");
         SearchSourceBuilder sourceBuilder = new SearchSourceBuilder();
         BoolQueryBuilder queryBuilders = QueryBuilders.boolQuery();
-        if(keyword != null) queryBuilders.must(QueryBuilders.matchQuery("product_name", keyword));
+        if(keyword != null) {
+            queryBuilders.must(QueryBuilders.matchQuery("product_name", keyword));
+        }
         if(0 <= category && category <= 7) queryBuilders.must(QueryBuilders.matchQuery("category", category));
         if(0 <= state && state <= 3) queryBuilders.must(QueryBuilders.matchQuery("state", state));
 
