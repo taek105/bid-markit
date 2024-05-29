@@ -46,14 +46,14 @@ public class HLRestProductService {
     }
 
     public Page<ProductBriefResponse> findAll(
-            String keywords, Integer category, Integer state, Integer sort, Pageable pageable
+            String keyword, Integer category, Integer state, Integer sort, Pageable pageable
     ) throws IOException {
         SearchRequest searchRequest = new SearchRequest("products");
         SearchSourceBuilder sourceBuilder = new SearchSourceBuilder();
         BoolQueryBuilder queryBuilders = QueryBuilders.boolQuery();
-        if(keywords != null) queryBuilders.must(QueryBuilders.matchQuery("product_name", keywords));
+        if(keyword != null) queryBuilders.must(QueryBuilders.matchQuery("product_name", keyword));
         if(0 <= category && category <= 7) queryBuilders.must(QueryBuilders.matchQuery("category", category));
-        if(0 <= state && state <= 3) queryBuilders = queryBuilders.must(QueryBuilders.matchQuery("state", state));
+        if(0 <= state && state <= 3) queryBuilders.must(QueryBuilders.matchQuery("state", state));
 
         sourceBuilder.query(queryBuilders).from((int) pageable.getOffset()).size(pageable.getPageSize());
         switch (sort) {

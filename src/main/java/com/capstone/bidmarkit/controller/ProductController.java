@@ -64,12 +64,12 @@ public class ProductController {
 
     @GetMapping("/search/products")
     public ResponseEntity<Page<ProductBriefResponse>> search(
-            @RequestParam(required = false) String keywords, @RequestParam(defaultValue = "-1") Integer category,
+            @RequestParam(required = false) String keyword, @RequestParam(defaultValue = "-1") Integer category,
             @RequestParam(defaultValue = "0") Integer state, @RequestParam(defaultValue = "0") Integer sort,
             @RequestParam int pageNum, @RequestParam int size
     ) throws IOException {
         return ResponseEntity.ok().body(
-                hlRestProductService.findAll(keywords, category, state, sort, PageRequest.of(pageNum, size))
+                hlRestProductService.findAll(keyword, category, state, sort, PageRequest.of(pageNum, size))
         );
     }
 
