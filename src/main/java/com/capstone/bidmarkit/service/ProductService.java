@@ -25,6 +25,7 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.support.PageableExecutionUtils;
 import org.springframework.stereotype.Service;
@@ -215,9 +216,9 @@ public class ProductService {
         );
     }
 
-    public List<ProductBriefResponse> suggestProducts(String memberId) throws IOException {
+    public Page<ProductBriefResponse> suggestProducts(String memberId, Pageable pageable) throws IOException {
         final float BID_BOOST = 20F, SEARCH_BOOST = 10F;
-        final int SEARCH_SIZE = 40;
+        final int SEARCH_SIZE = 50;
 
         BidHistory bidHistory = historyService.getBidHistory(memberId);
         SearchHistory searchHistory = historyService.getSearchHistory(memberId);
@@ -253,15 +254,18 @@ public class ProductService {
                             .build()
             );
 
-        List<ProductBriefResponse> res = new ArrayList<>();
+        List<Hit<ElasticProduct>> hits = new ArrayList<>();
         for (SearchRequest request: requestList) {
             SearchResponse<ElasticProduct> response = client.search(request, ElasticProduct.class);
-            List<Hit<ElasticProduct>> hits = response.hits().hits();
-            res.addAll(hits.stream().map(ProductBriefResponse::from).toList());
+            hits.addAll(response.hits().hits());
         }
-//        Collections.shuffle(res);
+        int found = hits.size();
+        List<ProductBriefResponse> products = new ArrayList<>();
+        for (int i = (int) pageable.getOffset(); i < found && i < pageable.getOffset() + pageable.getPageSize(); i++) {
+            products.add(ProductBriefResponse.from(hits.get(i)));
+        }
 
-        return res;
+        return new PageImpl<>(products, pageable, found);
     }
 
     private MoreLikeThisQuery getMoreLikeThisQuery(List<String> keywords, float boost) {

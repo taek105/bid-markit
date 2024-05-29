@@ -6,8 +6,10 @@ import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.RestHighLevelClient;
+import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
+import org.elasticsearch.search.sort.SortOrder;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -15,7 +17,6 @@ import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.time.Instant;
-import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
@@ -44,12 +45,24 @@ public class HLRestProductService {
         return result;
     }
 
-    public Page<ProductBriefResponse> findAllByKeyword(String keywords, Pageable pageable) throws IOException {
+    public Page<ProductBriefResponse> findAll(
+            String keywords, Integer category, Integer state, Integer sort, Pageable pageable
+    ) throws IOException {
         SearchRequest searchRequest = new SearchRequest("products");
         SearchSourceBuilder sourceBuilder = new SearchSourceBuilder();
-        sourceBuilder.query(QueryBuilders.matchQuery("product_name", keywords).boost(2.0f))
-                .from((int) pageable.getOffset())
-                .size(pageable.getPageSize());
+        BoolQueryBuilder queryBuilders = QueryBuilders.boolQuery();
+        if(keywords != null) queryBuilders.must(QueryBuilders.matchQuery("product_name", keywords));
+        if(0 <= category && category <= 7) queryBuilders.must(QueryBuilders.matchQuery("category", category));
+        if(0 <= state && state <= 3) queryBuilders = queryBuilders.must(QueryBuilders.matchQuery("state", state));
+
+        sourceBuilder.query(queryBuilders).from((int) pageable.getOffset()).size(pageable.getPageSize());
+        switch (sort) {
+            case 0: sourceBuilder.sort("updated_at", SortOrder.DESC); break;
+            case 1: sourceBuilder.sort("deadline", SortOrder.ASC); break;
+            case 2: sourceBuilder.sort("bid_price", SortOrder.ASC); break;
+            case 3: sourceBuilder.sort("bid_price", SortOrder.DESC); break;
+        }
+
         searchRequest.source(sourceBuilder);
 
         SearchResponse response = highLevelClient.search(searchRequest, RequestOptions.DEFAULT);
