@@ -51,7 +51,7 @@ public class HLRestProductService {
         SearchRequest searchRequest = new SearchRequest("products");
         SearchSourceBuilder sourceBuilder = new SearchSourceBuilder();
         BoolQueryBuilder queryBuilders = QueryBuilders.boolQuery();
-        if(!keywords.isEmpty()) queryBuilders.must(QueryBuilders.matchQuery("product_name", keywords));
+        if(keywords != null) queryBuilders.must(QueryBuilders.matchQuery("product_name", keywords));
         if(0 <= category && category <= 7) queryBuilders.must(QueryBuilders.matchQuery("category", category));
         if(0 <= state && state <= 3) queryBuilders = queryBuilders.must(QueryBuilders.matchQuery("state", state));
 
