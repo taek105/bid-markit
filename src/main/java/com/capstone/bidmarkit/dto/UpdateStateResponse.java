@@ -1,11 +1,14 @@
 package com.capstone.bidmarkit.dto;
 
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
 
 @Getter
 @Setter
-public class AddBidRequest {
+@AllArgsConstructor
+public class UpdateStateResponse {
     private int productId;
-    private int price;
+    private int state;
+
 }

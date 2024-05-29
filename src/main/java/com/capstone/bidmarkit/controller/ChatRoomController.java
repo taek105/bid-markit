@@ -37,7 +37,7 @@ public class ChatRoomController {
         return ResponseEntity.ok(chatDetails);
     }
 
-    @PutMapping("/chatRooms/{roomId}/check/{checkType}") // 수정된 부분
+    @PutMapping("/chatRooms/{roomId}/check/{checkType}")
     public ResponseEntity<UpdateCheckResponse> customerCheck(@RequestHeader(name="Authorization") String token, @PathVariable int roomId, @PathVariable int checkType) {
         return ResponseEntity.ok(chatRoomService.updateCheck(tokenService.getMemberId(token.substring(7)), roomId, (byte) checkType));
     }
