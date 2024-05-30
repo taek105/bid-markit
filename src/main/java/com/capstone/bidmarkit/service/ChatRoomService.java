@@ -3,10 +3,7 @@ package com.capstone.bidmarkit.service;
 import com.capstone.bidmarkit.domain.*;
 
 import com.capstone.bidmarkit.dto.*;
-import com.capstone.bidmarkit.repository.ChatRoomRepository;
-import com.capstone.bidmarkit.repository.ProductImgRepository;
-import com.capstone.bidmarkit.repository.ProductRepository;
-import com.capstone.bidmarkit.repository.TradeRepository;
+import com.capstone.bidmarkit.repository.*;
 import com.querydsl.core.types.Projections;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
@@ -27,10 +24,11 @@ public class ChatRoomService {
     private final ProductRepository productRepository;
     private final ProductImgRepository productImgRepository;
     private final TradeRepository tradeRepository;
+    private final ChatRoomRepository chatRoomRepository;
+    private final MemberRepository memberRepository;
+
     @PersistenceContext
     private EntityManager entityManager;
-
-    private final ChatRoomRepository chatRoomRepository;
 
     @Transactional
     public ChatRoom save(String bidderId, AddChatRoomRequest request) {
@@ -106,6 +104,8 @@ public class ChatRoomService {
     }
 
     public UpdateCheckResponse updateCheck(String memberId, int roomId, Byte checkType) {
+        if ( checkType != 2 && checkType != 1) throw new IllegalArgumentException("invalid checkType");
+
         ChatRoom chatRoom = chatRoomRepository.findById(roomId);
 
         if (memberId.equals(chatRoom.getSellerId())) chatRoom.setSellerCheck(checkType);
@@ -122,18 +122,26 @@ public class ChatRoomService {
                                 .price(productRepository.findPriceById(chatRoom.getProductId()))
                                 .build()
                 );
-//                tradeService.save(new AddTradeRequest(productRepository.findProductById(roomId), chatRoom.getSellerId(), productRepository.findPriceById(chatRoom.getProductId())));
             }
-            else
+            else {
                 updateProductState(chatRoom.getProductId(), 2);
+                if ( chatRoom.getSellerCheck() == 2 ) {
+                    memberRepository.incrCancelSale(chatRoom.getSellerId());
+                }
+                else if ( chatRoom.getBidderCheck() == 2 ){
+                    memberRepository.incrCancelPurchase(chatRoom.getBidderId());
+                }
+                else {
+                    memberRepository.incrCancelSale(chatRoom.getSellerId());
+                    memberRepository.incrCancelPurchase(chatRoom.getBidderId());
+                }
+            }
         }
-
-
         chatRoomRepository.save(chatRoom);
         return new UpdateCheckResponse(chatRoom.getSellerCheck(), chatRoom.getBidderCheck());
     }
 
-    public UpdateStateResponse updateProductState(int productId, int state) {
+    public void updateProductState(int productId, int state) {
         Product res = productRepository.findById(productId).orElseThrow(() -> new IllegalArgumentException("Product not found"));
 
         if ( 0 > state || state > 3 ) throw new IllegalArgumentException("Illegal state");
@@ -142,6 +150,6 @@ public class ChatRoomService {
 
         productRepository.save(res);
 
-        return new UpdateStateResponse(productId, res.getState());
+//        return new UpdateStateResponse(productId, res.getState());
     }
 }
