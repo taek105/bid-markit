@@ -1,10 +1,7 @@
 package com.capstone.bidmarkit.domain;
 
 import jakarta.persistence.*;
-import lombok.AccessLevel;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
@@ -35,4 +32,11 @@ public class Trade {
     @CreatedDate
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
+
+    @Builder
+    public Trade(Product product, String buyerId, Integer price) {
+        this.product = product;
+        this.buyerId = buyerId;
+        this.price = price;
+    }
 }

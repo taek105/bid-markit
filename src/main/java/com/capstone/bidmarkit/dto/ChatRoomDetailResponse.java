@@ -11,6 +11,8 @@ public class ChatRoomDetailResponse {
     private String thumbnail, productName;
     private int price;
     private List<ChatLogResponse> log;
+    private Byte sellerCheck;
+    private Byte bidderCheck;
 
     public ChatRoomDetailResponse(String thumbnail, String productName, int price, List<ChatLogResponse> log) {
         this.thumbnail = thumbnail;

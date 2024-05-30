@@ -9,9 +9,11 @@ import co.elastic.clients.elasticsearch._types.query_dsl.QueryBuilders;
 import co.elastic.clients.elasticsearch.core.SearchRequest;
 import co.elastic.clients.elasticsearch.core.SearchResponse;
 import co.elastic.clients.elasticsearch.core.search.Hit;
+import com.capstone.bidmarkit.controller.ChatRoomController;
 import com.capstone.bidmarkit.domain.*;
 import com.capstone.bidmarkit.dto.*;
 import com.capstone.bidmarkit.repository.BidRepository;
+import com.capstone.bidmarkit.repository.ChatRoomRepository;
 import com.capstone.bidmarkit.repository.ProductImgRepository;
 import com.capstone.bidmarkit.repository.ProductRepository;
 import com.google.cloud.storage.BlobInfo;
@@ -23,6 +25,7 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -42,6 +45,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Service
 public class ProductService {
+
     private final ProductRepository productRepository;
     private final ProductImgRepository productImgRepository;
     private final BidRepository bidRepository;
@@ -54,6 +58,8 @@ public class ProductService {
 
     @PersistenceContext
     private EntityManager entityManager;
+    @Autowired
+    private ChatRoomRepository chatRoomRepository;
 
     @Transactional
     public AddProductResponse save(String memberId, AddProductRequest dto) throws IOException {
@@ -205,6 +211,13 @@ public class ProductService {
             throw new IllegalArgumentException("It is not a purchasable product");
 
         historyService.upsertBidHistory(memberId, product.getName(), product.getCategory());
+        chatRoomRepository.save(
+                ChatRoom.builder()
+                        .productId(product.getId())
+                        .sellerId(product.getMemberId())
+                        .bidderId(memberId)
+                        .build()
+        );
 
         product.setState(1);
         product.setBidPrice(product.getPrice());
@@ -284,15 +297,4 @@ public class ProductService {
                 .build();
     }
 
-    public UpdateStateResponse updateProductState(int productId, int state) {
-        Product res = productRepository.findById(productId).orElseThrow(() -> new IllegalArgumentException("Product not found"));
-
-        if ( 0 > state || state > 3 ) throw new IllegalArgumentException("Illegal state");
-
-        res.setState(state);
-
-        productRepository.save(res);
-
-        return new UpdateStateResponse(productId, res.getState());
-    }
 }

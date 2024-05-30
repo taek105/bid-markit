@@ -6,6 +6,7 @@ import com.capstone.bidmarkit.dto.*;
 import com.capstone.bidmarkit.repository.ChatRoomRepository;
 import com.capstone.bidmarkit.repository.ProductImgRepository;
 import com.capstone.bidmarkit.repository.ProductRepository;
+import com.capstone.bidmarkit.repository.TradeRepository;
 import com.querydsl.core.types.Projections;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
@@ -25,6 +26,7 @@ import java.util.List;
 public class ChatRoomService {
     private final ProductRepository productRepository;
     private final ProductImgRepository productImgRepository;
+    private final TradeRepository tradeRepository;
     @PersistenceContext
     private EntityManager entityManager;
 
@@ -82,7 +84,7 @@ public class ChatRoomService {
         return PageableExecutionUtils.getPage(results, pageable, () -> total);
     }
 
-    public ChatRoomDetailResponse findChatDetailsByRoomId(int roomId) {
+    public ChatRoomDetailResponse findChatDetailsByRoomId(String memberId, int roomId) {
         JPAQueryFactory queryFactory = new JPAQueryFactory(entityManager);
         QChatMessage chatMessage = QChatMessage.chatMessage;
 
@@ -95,6 +97,7 @@ public class ChatRoomService {
                 .fetch();
 
         int productId = chatRoomRepository.findProductIdByRoomId(roomId);
+
         List<String> imgUrls = productImgRepository.findImgUrlsByProductId(productId);
         String productName = productRepository.findProductNameById(productId);
         int price = productRepository.findPriceById(productId);
@@ -105,17 +108,40 @@ public class ChatRoomService {
     public UpdateCheckResponse updateCheck(String memberId, int roomId, Byte checkType) {
         ChatRoom chatRoom = chatRoomRepository.findById(roomId);
 
-        if (memberId.equals(chatRoom.getSellerId())) {
-            chatRoom.setSellerCheck(checkType);
-            chatRoomRepository.save(chatRoom);
-            return new UpdateCheckResponse(chatRoom.getSellerCheck(), chatRoom.getBidderCheck());
+        if (memberId.equals(chatRoom.getSellerId())) chatRoom.setSellerCheck(checkType);
+        else if (memberId.equals(chatRoom.getBidderId())) chatRoom.setBidderCheck(checkType);
+        else throw new IllegalArgumentException("not matched sellerId or bidderId");
+
+        if (chatRoom.getBidderCheck() > 0 && chatRoom.getSellerCheck() > 0) {
+            if ( chatRoom.getBidderCheck() == 2 && chatRoom.getSellerCheck() == 2 ) {
+                updateProductState(chatRoom.getProductId(), 3);
+                tradeRepository.save(
+                        Trade.builder()
+                                .product(productRepository.findProductById(roomId))
+                                .buyerId(chatRoom.getSellerId())
+                                .price(productRepository.findPriceById(chatRoom.getProductId()))
+                                .build()
+                );
+//                tradeService.save(new AddTradeRequest(productRepository.findProductById(roomId), chatRoom.getSellerId(), productRepository.findPriceById(chatRoom.getProductId())));
+            }
+            else
+                updateProductState(chatRoom.getProductId(), 2);
         }
-        else if (memberId.equals(chatRoom.getBidderId())) {
-            chatRoom.setBidderCheck(checkType);
-            chatRoomRepository.save(chatRoom);
-            return new UpdateCheckResponse(chatRoom.getSellerCheck(), chatRoom.getBidderCheck());
-        }
-        else
-            throw new IllegalArgumentException("not matched sellerId or bidderId");
+
+
+        chatRoomRepository.save(chatRoom);
+        return new UpdateCheckResponse(chatRoom.getSellerCheck(), chatRoom.getBidderCheck());
+    }
+
+    public UpdateStateResponse updateProductState(int productId, int state) {
+        Product res = productRepository.findById(productId).orElseThrow(() -> new IllegalArgumentException("Product not found"));
+
+        if ( 0 > state || state > 3 ) throw new IllegalArgumentException("Illegal state");
+
+        res.setState(state);
+
+        productRepository.save(res);
+
+        return new UpdateStateResponse(productId, res.getState());
     }
 }
