@@ -84,7 +84,7 @@ public class ChatRoomService {
         return PageableExecutionUtils.getPage(results, pageable, () -> total);
     }
 
-    public ChatRoomDetailResponse findChatDetailsByRoomId(String memberId, int roomId) {
+    public ChatRoomDetailResponse findChatDetailsByRoomId(int roomId) {
         JPAQueryFactory queryFactory = new JPAQueryFactory(entityManager);
         QChatMessage chatMessage = QChatMessage.chatMessage;
 

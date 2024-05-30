@@ -21,7 +21,6 @@ public class ChatRoomController {
     private final ChatRoomService chatRoomService;
     private final TokenService tokenService;
 
-    //TEST
     @PostMapping("/chatRooms")
     public ResponseEntity<ChatRoom> createRoom(@RequestHeader(name="Authorization") String token, @RequestBody AddChatRoomRequest request) {
         return ResponseEntity.ok().body(chatRoomService.save(tokenService.getMemberId(token.substring(7)), request));
@@ -33,12 +32,12 @@ public class ChatRoomController {
     }
 
     @GetMapping("/chatRooms/{roomId}")
-    public ResponseEntity<ChatRoomDetailResponse> loadMessage(@RequestHeader(name="Authorization") String token, @PathVariable int roomId) {
-        ChatRoomDetailResponse chatDetails = chatRoomService.findChatDetailsByRoomId(tokenService.getMemberId(token.substring(7)), roomId);
+    public ResponseEntity<ChatRoomDetailResponse> loadMessage(@PathVariable int roomId) {
+        ChatRoomDetailResponse chatDetails = chatRoomService.findChatDetailsByRoomId(roomId);
         return ResponseEntity.ok(chatDetails);
     }
 
-    @PutMapping("/chatRooms/{roomId}/check/{checkType}") // 상품 상태 변경 가능
+    @PutMapping("/chatRooms/{roomId}/check/{checkType}") // 상품 상태변경
     public ResponseEntity<UpdateCheckResponse> customerCheck(@RequestHeader(name="Authorization") String token, @PathVariable int roomId, @PathVariable int checkType) {
         return ResponseEntity.ok(chatRoomService.updateCheck(tokenService.getMemberId(token.substring(7)), roomId, (byte) checkType));
     }
