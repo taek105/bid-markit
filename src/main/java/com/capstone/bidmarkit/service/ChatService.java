@@ -7,6 +7,9 @@ import com.capstone.bidmarkit.repository.ChatRoomRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+
 @RequiredArgsConstructor
 @Service
 public class ChatService {
@@ -15,7 +18,7 @@ public class ChatService {
 
     public ChatMessage save(SendChatRequest request) {
 
-        chatRoomRepository.updateUpdatedAt(request.getChatRoomId());
+        chatRoomRepository.updateUpdatedAt(request.getChatRoomId(), LocalDateTime.now(ZoneId.of("Asia/Seoul")));
 
         return chatMessageRepository.save(
                 ChatMessage.builder()
