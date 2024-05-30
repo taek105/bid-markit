@@ -9,7 +9,6 @@ import co.elastic.clients.elasticsearch._types.query_dsl.QueryBuilders;
 import co.elastic.clients.elasticsearch.core.SearchRequest;
 import co.elastic.clients.elasticsearch.core.SearchResponse;
 import co.elastic.clients.elasticsearch.core.search.Hit;
-import com.capstone.bidmarkit.controller.ChatRoomController;
 import com.capstone.bidmarkit.domain.*;
 import com.capstone.bidmarkit.dto.*;
 import com.capstone.bidmarkit.repository.BidRepository;
