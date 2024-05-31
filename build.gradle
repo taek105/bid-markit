@@ -39,6 +39,7 @@ dependencies {
     implementation 'org.elasticsearch.client:elasticsearch-rest-high-level-client:7.17.4'
     implementation ('com.github.javafaker:javafaker:1.0.2') { exclude module: 'org.yaml' }
     implementation group: 'org.yaml', name: 'snakeyaml', version: '1.27'
+    implementation group: 'org.redisson', name: 'redisson-spring-boot-starter', version: '3.30.0'
     implementation group: 'com.googlecode.json-simple', name: 'json-simple', version: '1.1.1'
     implementation group: 'org.springframework.cloud', name: 'spring-cloud-gcp-starter', version: '1.2.8.RELEASE'
     implementation group: 'org.springframework.cloud', name: 'spring-cloud-gcp-storage', version: '1.2.8.RELEASE'

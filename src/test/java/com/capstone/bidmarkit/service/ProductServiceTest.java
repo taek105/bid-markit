@@ -79,4 +79,25 @@ class ProductServiceTest {
 //        }
 //        productRepository.saveAll(insertList);
 //    }
+
+    @Test
+    public void insertTestProduct() {
+        Product product = Product.builder()
+                .memberId("testid1")
+                .name("test")
+                .category(0)
+                .content("testtest")
+                .deadline(LocalDateTime.now().plusMinutes(2))
+                .price(20000)
+                .initPrice(10000)
+                .build();
+
+        List<ProductImg> imgList = new ArrayList<>();
+        for (int j = 0; j < 3; j++) {
+            ProductImg newImg = ProductImg.builder().imgUrl("testImg" + j).product(product).isThumbnail(j == 0).build();
+            imgList.add(newImg);
+        }
+        product.setImages(imgList);
+        productRepository.save(product);
+    }
 }

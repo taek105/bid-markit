@@ -112,43 +112,43 @@ public class ChatRoomService {
         else if (memberId.equals(chatRoom.getBidderId())) chatRoom.setBidderCheck(checkType);
         else throw new IllegalArgumentException("not matched sellerId or bidderId");
 
-        if (chatRoom.getBidderCheck() > 0 && chatRoom.getSellerCheck() > 0) {
-            if ( chatRoom.getBidderCheck() == 2 && chatRoom.getSellerCheck() == 2 ) {
-                updateProductState(chatRoom.getProductId(), 3);
-                tradeRepository.save(
-                        Trade.builder()
-                                .product(productRepository.findProductById(roomId))
-                                .buyerId(chatRoom.getSellerId())
-                                .price(productRepository.findPriceById(chatRoom.getProductId()))
-                                .build()
-                );
+        Product found = productRepository.findById(chatRoom.getProductId()).orElseThrow(
+                () -> new IllegalArgumentException("no found product")
+        );
+
+        if ( chatRoom.getBidderCheck() == 2 && chatRoom.getSellerCheck() == 2 ) {
+            updateProductState(found, 3);
+            tradeRepository.save(
+                    Trade.builder()
+                            .product(found)
+                            .buyerId(chatRoom.getSellerId())
+                            .price(found.getBidPrice())
+                            .build()
+            );
+        } else if (chatRoom.getBidderCheck() > 0 && chatRoom.getSellerCheck() > 0) {
+            updateProductState(found, 2);
+            if ( chatRoom.getSellerCheck() == 2 ) {
+                memberRepository.incrCancelSale(chatRoom.getSellerId());
+            }
+            else if ( chatRoom.getBidderCheck() == 2 ){
+                memberRepository.incrCancelPurchase(chatRoom.getBidderId());
             }
             else {
-                updateProductState(chatRoom.getProductId(), 2);
-                if ( chatRoom.getSellerCheck() == 2 ) {
-                    memberRepository.incrCancelSale(chatRoom.getSellerId());
-                }
-                else if ( chatRoom.getBidderCheck() == 2 ){
-                    memberRepository.incrCancelPurchase(chatRoom.getBidderId());
-                }
-                else {
-                    memberRepository.incrCancelSale(chatRoom.getSellerId());
-                    memberRepository.incrCancelPurchase(chatRoom.getBidderId());
-                }
+                memberRepository.incrCancelSale(chatRoom.getSellerId());
+                memberRepository.incrCancelPurchase(chatRoom.getBidderId());
             }
         }
+
         chatRoomRepository.save(chatRoom);
         return new UpdateCheckResponse(chatRoom.getSellerCheck(), chatRoom.getBidderCheck());
     }
 
-    public void updateProductState(int productId, int state) {
-        Product res = productRepository.findById(productId).orElseThrow(() -> new IllegalArgumentException("Product not found"));
-
+    public void updateProductState(Product product, int state) {
         if ( 0 > state || state > 3 ) throw new IllegalArgumentException("Illegal state");
 
-        res.setState(state);
+        product.setState(state);
 
-        productRepository.save(res);
+        productRepository.save(product);
 
 //        return new UpdateStateResponse(productId, res.getState());
     }

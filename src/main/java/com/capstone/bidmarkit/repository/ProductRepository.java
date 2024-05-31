@@ -5,11 +5,10 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 public interface ProductRepository extends JpaRepository<Product, Integer> {
-
-    List<Product> findProductsById(int[] personalizedList);
 
     @Query("SELECT p.name FROM Product p WHERE p.id = :productId")
     String findProductNameById(@Param("productId") int productId);
@@ -17,5 +16,5 @@ public interface ProductRepository extends JpaRepository<Product, Integer> {
     @Query("SELECT p.price FROM Product p WHERE p.id = :productId")
     int findPriceById(@Param("productId") int productId);
 
-    Product findProductById(int id);
+    List<Product> findAllByDeadlineBeforeAndState(LocalDateTime deadline, Integer state);
 }

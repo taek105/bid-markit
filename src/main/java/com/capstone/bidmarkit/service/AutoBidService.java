@@ -11,9 +11,13 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
 @RequiredArgsConstructor
 @Service
@@ -22,6 +26,17 @@ public class AutoBidService {
     private final BidRepository bidRepository;
     private final ProductRepository productRepository;
     private final HistoryService historyService;
+    private final RedissonClient redissonClient;
+
+    @Value("${redis.product-bid.key}")
+    private String productBidKey;
+
+    @Value("${redis.product-bid.wait-time}")
+    private int waitTime;
+
+    @Value("${redis.product-bid.lease-time}")
+    private int leaseTime;
+
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -46,68 +61,85 @@ public class AutoBidService {
         if(minBidPrice >= dto.getCeilingPrice())
             throw new IllegalArgumentException("Price to set AutoBid is not enough");
 
-        AutoBid currentAutoBid = autoBidRepository.findByProductId(dto.getProductId());
+        RLock lock = redissonClient.getLock(productBidKey + product.getId());
 
-        AutoBid newAutoBid = AutoBid.builder()
-                .productId(dto.getProductId())
-                .ceilingPrice(dto.getCeilingPrice())
-                .memberId(memberId)
-                .build();
+        AutoBid newAutoBid;
 
-        // 상품 입찰 내역 저장
-        historyService.upsertBidHistory(memberId, product.getName(), product.getCategory());
+        try {
+            boolean available = lock.tryLock(waitTime, leaseTime, TimeUnit.SECONDS);
 
-        // 기존 자동 입찰 설정이 없을 경우,
-        if(currentAutoBid == null) {
-            autoBidRepository.save(newAutoBid);
-            Optional<Bid> currentBid = bidRepository.findTopByProductIdOrderByPriceDesc(dto.getProductId());
-            // 최고가 입찰 내역이 존재하고, 해당 입찰을 진행한 멤버가 지금 자동 입찰을 시도하는 멤버가 아닐 경우, 상회 입찰을 진행
-            if(currentBid.isPresent() && !currentBid.get().getMemberId().equals(memberId)) {
+            if(!available) {
+                System.out.println("autoBid: failed to get a lock of productId " + product.getId());
+                throw new InterruptedException("autoBid: failed to get a lock of productId " + product.getId());
+            }
+
+            AutoBid currentAutoBid = autoBidRepository.findByProductId(dto.getProductId());
+
+            newAutoBid = AutoBid.builder()
+                    .productId(dto.getProductId())
+                    .ceilingPrice(dto.getCeilingPrice())
+                    .memberId(memberId)
+                    .build();
+
+            // 상품 입찰 내역 저장
+            historyService.upsertBidHistory(memberId, product.getName(), product.getCategory());
+
+            // 기존 자동 입찰 설정이 없을 경우,
+            if(currentAutoBid == null) {
+                autoBidRepository.save(newAutoBid);
+                Optional<Bid> currentBid = bidRepository.findTopByProductIdOrderByPriceDesc(dto.getProductId());
+                // 최고가 입찰 내역이 존재하고, 해당 입찰을 진행한 멤버가 지금 자동 입찰을 시도하는 멤버가 아닐 경우, 상회 입찰을 진행
+                if(currentBid.isPresent() && !currentBid.get().getMemberId().equals(memberId)) {
+                    bidRepository.save(
+                            Bid.builder()
+                                    .productId(dto.getProductId())
+                                    .memberId(memberId)
+                                    .price(minBidPrice)
+                                    .build()
+                    );
+                    // 즉시구매가로 입찰했을 경우, 즉시구매처리
+                    if(product.getPrice().equals(minBidPrice)) {
+                        product.setState(1);
+                        product.setBidPrice(product.getPrice());
+                        autoBidRepository.delete(newAutoBid);
+                    } else
+                        product.setBidPrice(minBidPrice);
+                }
+                return newAutoBid;
+            }
+
+            int minAutoBidPrice = currentAutoBid.getCeilingPrice() + minBidPrice(currentAutoBid.getCeilingPrice());
+            minAutoBidPrice = minAutoBidPrice > product.getPrice() ? product.getPrice() : minAutoBidPrice;
+
+            if(minAutoBidPrice <= dto.getCeilingPrice()) {
+                autoBidRepository.delete(currentAutoBid);
+                autoBidRepository.save(newAutoBid);
                 bidRepository.save(
                         Bid.builder()
-                        .productId(dto.getProductId())
+                                .productId(dto.getProductId())
                                 .memberId(memberId)
-                                .price(minBidPrice)
+                                .price(minAutoBidPrice)
                                 .build()
                 );
-                // 즉시구매가로 입찰했을 경우, 즉시구매처리
-                if(product.getPrice().equals(minBidPrice)) {
-                    product.setState(1);
-                    product.setBidPrice(product.getPrice());
-                    autoBidRepository.delete(newAutoBid);
-                } else
-                    product.setBidPrice(minBidPrice);
+                product.setBidPrice(minAutoBidPrice);
+                return newAutoBid;
             }
-            return newAutoBid;
-        }
+            minAutoBidPrice = dto.getCeilingPrice() + minBidPrice(dto.getCeilingPrice());
+            minAutoBidPrice = currentAutoBid.getCeilingPrice() < minAutoBidPrice ? currentAutoBid.getCeilingPrice() : minAutoBidPrice;
 
-        int minAutoBidPrice = currentAutoBid.getCeilingPrice() + minBidPrice(currentAutoBid.getCeilingPrice());
-        minAutoBidPrice = minAutoBidPrice > product.getPrice() ? product.getPrice() : minAutoBidPrice;
-
-        if(minAutoBidPrice <= dto.getCeilingPrice()) {
-            autoBidRepository.delete(currentAutoBid);
-            autoBidRepository.save(newAutoBid);
             bidRepository.save(
                     Bid.builder()
-                    .productId(dto.getProductId())
-                    .memberId(memberId)
-                    .price(minAutoBidPrice)
-                    .build()
+                            .productId(dto.getProductId())
+                            .memberId(currentAutoBid.getMemberId())
+                            .price(minAutoBidPrice)
+                            .build()
             );
             product.setBidPrice(minAutoBidPrice);
-            return newAutoBid;
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        } finally {
+            lock.unlock();
         }
-        minAutoBidPrice = dto.getCeilingPrice() + minBidPrice(dto.getCeilingPrice());
-        minAutoBidPrice = currentAutoBid.getCeilingPrice() < minAutoBidPrice ? currentAutoBid.getCeilingPrice() : minAutoBidPrice;
-
-        bidRepository.save(
-                Bid.builder()
-                .productId(dto.getProductId())
-                .memberId(currentAutoBid.getMemberId())
-                .price(minAutoBidPrice)
-                .build()
-        );
-        product.setBidPrice(minAutoBidPrice);
 
         return newAutoBid;
     }

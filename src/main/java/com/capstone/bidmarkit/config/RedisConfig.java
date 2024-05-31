@@ -1,6 +1,9 @@
 package com.capstone.bidmarkit.config;
 
 import com.capstone.bidmarkit.redis.RedisSubscriber;
+import org.redisson.Redisson;
+import org.redisson.api.RedissonClient;
+import org.redisson.config.Config;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -40,9 +43,10 @@ public class RedisConfig {
     }
 
     @Bean
-    public RedisMessageListenerContainer redisMessageListenerContainer(RedisConnectionFactory redisConnectionFactory,
-                                                                       MessageListenerAdapter listenerAdapter,
-                                                                       ChannelTopic channelTopic) {
+    public RedisMessageListenerContainer redisMessageListenerContainer(
+            RedisConnectionFactory redisConnectionFactory, MessageListenerAdapter listenerAdapter,
+            ChannelTopic channelTopic
+    ) {
         RedisMessageListenerContainer container = new RedisMessageListenerContainer();
         container.setConnectionFactory(redisConnectionFactory);
         container.addMessageListener(listenerAdapter, channelTopic);
@@ -55,5 +59,13 @@ public class RedisConfig {
     @Bean
     public ChannelTopic channelTopic() {
         return new ChannelTopic("bidmarKitChatRoom");
+    }
+
+    @Bean
+    public RedissonClient redissonClient() {
+        Config config = new Config();
+        config.useSingleServer().setAddress("redis://" + redisHost + ":" + redisPort);
+
+        return Redisson.create(config);
     }
 }

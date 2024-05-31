@@ -24,12 +24,16 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.support.PageableExecutionUtils;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -39,6 +43,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
@@ -51,14 +56,27 @@ public class ProductService {
     private final Storage storage;
     private final ElasticsearchClient client;
     private final HistoryService historyService;
+    private final ChatRoomRepository chatRoomRepository;
+    private final RedisTemplate redisTemplate;
+    private final RedissonClient redissonClient;
 
     @Value("${spring.cloud.gcp.storage.bucket}")
     private String bucketName;
 
+    @Value("${redis.schedule.key}")
+    private String scheduleKey;
+
+    @Value("${redis.product-bid.key}")
+    private String productBidKey;
+
+    @Value("${redis.product-bid.wait-time}")
+    private int waitTime;
+
+    @Value("${redis.product-bid.lease-time}")
+    private int leaseTime;
+
     @PersistenceContext
     private EntityManager entityManager;
-    @Autowired
-    private ChatRoomRepository chatRoomRepository;
 
     @Transactional
     public AddProductResponse save(String memberId, AddProductRequest dto) throws IOException {
@@ -81,7 +99,7 @@ public class ProductService {
         for (int i = 0; i < dto.getImages().size(); i++) {
             MultipartFile image = dto.getImages().get(i);
             String uuid = UUID.randomUUID().toString();
-            BlobInfo blobInfo = storage.create(
+            storage.create(
                     BlobInfo.newBuilder(bucketName, uuid)
                             .setContentType(image.getContentType())
                             .build(),
@@ -209,23 +227,39 @@ public class ProductService {
         if(product.getState() != 0)
             throw new IllegalArgumentException("It is not a purchasable product");
 
-        historyService.upsertBidHistory(memberId, product.getName(), product.getCategory());
-        chatRoomRepository.save(
-                ChatRoom.builder()
-                        .productId(product.getId())
-                        .sellerId(product.getMemberId())
-                        .bidderId(memberId)
-                        .build()
-        );
+        RLock lock = redissonClient.getLock(productBidKey + productId);
 
-        product.setState(1);
-        product.setBidPrice(product.getPrice());
-        bidRepository.save(Bid.builder()
-                .productId(productId)
-                .memberId(memberId)
-                .price(product.getPrice())
-                .build()
-        );
+        try {
+            // 최대 5초 동안 락 획득 시도, 최대 1초 동안 락 점유
+            boolean available = lock.tryLock(waitTime, leaseTime, TimeUnit.SECONDS);
+
+            if(!available) {
+                System.out.println("purchase: failed to get a lock of productId " + productId);
+                throw new InterruptedException("purchase: failed to get a lock of productId " + productId);
+            }
+
+            historyService.upsertBidHistory(memberId, product.getName(), product.getCategory());
+            chatRoomRepository.save(
+                    ChatRoom.builder()
+                            .productId(product.getId())
+                            .sellerId(product.getMemberId())
+                            .bidderId(memberId)
+                            .build()
+            );
+
+            product.setState(1);
+            product.setBidPrice(product.getPrice());
+            bidRepository.save(Bid.builder()
+                    .productId(productId)
+                    .memberId(memberId)
+                    .price(product.getPrice())
+                    .build()
+            );
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        } finally {
+            lock.unlock();
+        }
     }
 
     public Page<ProductBriefResponse> suggestProducts(String memberId, Pageable pageable) throws IOException {
@@ -296,4 +330,36 @@ public class ProductService {
                 .build();
     }
 
+    @Scheduled(cron = "${redis.schedule.cron}")
+    public void updateExpiredState() {
+        String instanceId = UUID.randomUUID().toString();
+        boolean hasLock = redisTemplate.opsForValue().setIfAbsent(scheduleKey, instanceId, waitTime, TimeUnit.MINUTES);
+
+        if (hasLock) {
+            List<Product> products = productRepository.findAllByDeadlineBeforeAndState(LocalDateTime.now(), 0);
+            RLock[] rLockList = new RLock[products.size()];
+
+            for (int i = 0; i < products.size(); i++) {
+                rLockList[i] = redissonClient.getLock(productBidKey + products.get(i).getId());
+                products.get(i).setState(2);
+            }
+
+            RLock multiLock = redissonClient.getMultiLock(rLockList);
+
+            try {
+                boolean available = multiLock.tryLock(waitTime * 2, leaseTime * 2, TimeUnit.SECONDS);
+
+                if(!available) {
+                    System.out.println("updateExpired: failed to get a multiLock");
+                    throw new InterruptedException("updateExpired: failed to get a multiLock");
+                }
+
+                productRepository.saveAll(products);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            } finally {
+                multiLock.unlock();
+            }
+        }
+    }
 }
