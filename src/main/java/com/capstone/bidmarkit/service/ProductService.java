@@ -6,15 +6,15 @@ import co.elastic.clients.elasticsearch._types.SortOrder;
 import co.elastic.clients.elasticsearch._types.query_dsl.Like;
 import co.elastic.clients.elasticsearch._types.query_dsl.MoreLikeThisQuery;
 import co.elastic.clients.elasticsearch._types.query_dsl.QueryBuilders;
+import co.elastic.clients.elasticsearch.core.BulkRequest;
+import co.elastic.clients.elasticsearch.core.BulkResponse;
 import co.elastic.clients.elasticsearch.core.SearchRequest;
 import co.elastic.clients.elasticsearch.core.SearchResponse;
+import co.elastic.clients.elasticsearch.core.bulk.BulkResponseItem;
 import co.elastic.clients.elasticsearch.core.search.Hit;
 import com.capstone.bidmarkit.domain.*;
 import com.capstone.bidmarkit.dto.*;
-import com.capstone.bidmarkit.repository.BidRepository;
-import com.capstone.bidmarkit.repository.ChatRoomRepository;
-import com.capstone.bidmarkit.repository.ProductImgRepository;
-import com.capstone.bidmarkit.repository.ProductRepository;
+import com.capstone.bidmarkit.repository.*;
 import com.google.cloud.storage.BlobInfo;
 import com.google.cloud.storage.Storage;
 import com.querydsl.core.BooleanBuilder;
@@ -26,7 +26,6 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -57,6 +56,7 @@ public class ProductService {
     private final ElasticsearchClient client;
     private final HistoryService historyService;
     private final ChatRoomRepository chatRoomRepository;
+    private final ProductUpsertScheduleRepository productUpsertScheduleRepository;
     private final RedisTemplate redisTemplate;
     private final RedissonClient redissonClient;
 
@@ -74,6 +74,12 @@ public class ProductService {
 
     @Value("${redis.product-bid.lease-time}")
     private int leaseTime;
+
+    @Value("${redis.product-upsert.size}")
+    private int upsertScheduleSize;
+
+    @Value("${redis.product-upsert.schedule-id}")
+    private String scheduleId;
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -117,6 +123,9 @@ public class ProductService {
         }
 
         newProduct.setImages(images);
+
+        upsertProductsToElastic(new ElasticProduct(newProduct));
+
         return new AddProductResponse(newProduct.getId());
     }
 
@@ -255,7 +264,9 @@ public class ProductService {
                     .price(product.getPrice())
                     .build()
             );
-        } catch (InterruptedException e) {
+
+            upsertProductsToElastic(new ElasticProduct(product));
+        } catch (InterruptedException | IOException e) {
             throw new RuntimeException(e);
         } finally {
             lock.unlock();
@@ -305,6 +316,7 @@ public class ProductService {
             SearchResponse<ElasticProduct> response = client.search(request, ElasticProduct.class);
             hits.addAll(response.hits().hits());
         }
+
         int found = hits.size();
         List<ProductBriefResponse> products = new ArrayList<>();
         for (int i = (int) pageable.getOffset(); i < found && i < pageable.getOffset() + pageable.getPageSize(); i++) {
@@ -331,12 +343,14 @@ public class ProductService {
     }
 
     @Scheduled(cron = "${redis.schedule.cron}")
+    @Transactional
     public void updateExpiredState() {
         String instanceId = UUID.randomUUID().toString();
         boolean hasLock = redisTemplate.opsForValue().setIfAbsent(scheduleKey, instanceId, waitTime, TimeUnit.MINUTES);
 
         if (hasLock) {
             List<Product> products = productRepository.findAllByDeadlineBeforeAndState(LocalDateTime.now(), 0);
+            if(products.size() == 0) return;
             RLock[] rLockList = new RLock[products.size()];
 
             for (int i = 0; i < products.size(); i++) {
@@ -355,11 +369,84 @@ public class ProductService {
                 }
 
                 productRepository.saveAll(products);
-            } catch (InterruptedException e) {
+                bulkUpsertProductsToElastic(products.stream().map(product -> new ElasticProduct(product)).toList());
+            } catch (InterruptedException | IOException e) {
                 throw new RuntimeException(e);
             } finally {
                 multiLock.unlock();
             }
+        }
+    }
+
+    @Transactional
+    public void upsertProductsToElastic(ElasticProduct elasticProduct) throws IOException {
+        ProductUpsertSchedule schedule = productUpsertScheduleRepository.findById(scheduleId)
+                .orElse(productUpsertScheduleRepository.save(new ProductUpsertSchedule()));
+
+        List<ElasticProduct> productList = schedule.getProductList();
+        productList.add(elasticProduct);
+
+//        System.out.println("현재 스케줄");
+//        for (ElasticProduct product: schedule.getProductList()) System.out.println(product.getProduct_id() + " / " + product.getProduct_name());
+
+        if(productList.size() < upsertScheduleSize) {
+            productUpsertScheduleRepository.save(schedule);
+            return;
+        }
+
+        BulkRequest.Builder requestBuilder = new BulkRequest.Builder();
+
+        for (ElasticProduct product: productList) {
+            requestBuilder.operations(op -> op
+                    .index(idx -> idx
+                            .index("products")
+                            .id(product.getProduct_id().toString())
+                            .document(product)
+                    )
+            );
+        }
+
+        BulkResponse response = client.bulk(requestBuilder.build());
+
+        if (response.errors()) {
+            for (BulkResponseItem item: response.items()) {
+                if (item.error() != null) {
+                    System.out.println(item.error().reason());
+                }
+            }
+            throw new IOException("bulk api error");
+        }
+
+        productList.clear();
+        productUpsertScheduleRepository.save(schedule);
+
+//        System.out.println("남은 스케줄");
+//        for (ElasticProduct product: schedule.getProductList()) System.out.println(product.getProduct_id() + " / " + product.getProduct_name());
+    }
+
+    @Transactional
+    public void bulkUpsertProductsToElastic(List<ElasticProduct> elasticProducts) throws IOException {
+        BulkRequest.Builder requestBuilder = new BulkRequest.Builder();
+
+        for (ElasticProduct product: elasticProducts) {
+            requestBuilder.operations(op -> op
+                    .index(idx -> idx
+                            .index("products")
+                            .id(product.getProduct_id().toString())
+                            .document(product)
+                    )
+            );
+        }
+
+        BulkResponse response = client.bulk(requestBuilder.build());
+
+        if (response.errors()) {
+            for (BulkResponseItem item: response.items()) {
+                if (item.error() != null) {
+                    System.out.println(item.error().reason());
+                }
+            }
+            throw new IOException("bulk api error");
         }
     }
 }

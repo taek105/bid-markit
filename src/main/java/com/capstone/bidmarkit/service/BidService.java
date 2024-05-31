@@ -3,6 +3,7 @@ package com.capstone.bidmarkit.service;
 import com.capstone.bidmarkit.domain.*;
 import com.capstone.bidmarkit.dto.AddBidRequest;
 import com.capstone.bidmarkit.dto.BidResponse;
+import com.capstone.bidmarkit.dto.ElasticProduct;
 import com.capstone.bidmarkit.repository.AutoBidRepository;
 import com.capstone.bidmarkit.repository.BidRepository;
 import com.capstone.bidmarkit.repository.ProductRepository;
@@ -17,6 +18,7 @@ import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -26,6 +28,7 @@ public class BidService {
     private final BidRepository bidRepository;
     private final AutoBidRepository autoBidRepository;
     private final ProductRepository productRepository;
+    private final ProductService productService;
     private final HistoryService historyService;
     private final RedissonClient redissonClient;
 
@@ -64,10 +67,7 @@ public class BidService {
         try {
             boolean available = lock.tryLock(waitTime, leaseTime, TimeUnit.SECONDS);
 
-            if(!available) {
-                System.out.println("bid: failed to get a lock of productId " + product.getId());
-                throw new InterruptedException("bid: failed to get a lock of productId " + product.getId());
-            }
+            if(!available) throw new InterruptedException("bid: failed to get a lock of productId " + product.getId());
 
             // 상품 입찰 내역 저장
             historyService.upsertBidHistory(memberId, product.getName(), product.getCategory());
@@ -88,6 +88,7 @@ public class BidService {
             if(newBid.getPrice().equals(product.getPrice())) {
                 if(autoBid != null) autoBidRepository.delete(autoBid);
                 product.setState(1);
+                productService.upsertProductsToElastic(new ElasticProduct(product));
                 return newBid;
             }
 
@@ -113,7 +114,9 @@ public class BidService {
                     product.setBidPrice(newBidByAuto.getPrice());
                 }
             }
-        } catch (InterruptedException e) {
+
+            productService.upsertProductsToElastic(new ElasticProduct(product));
+        } catch (InterruptedException | IOException e) {
             throw new RuntimeException(e);
         } finally {
             lock.unlock();

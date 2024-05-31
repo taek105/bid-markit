@@ -16,12 +16,14 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.support.PageableExecutionUtils;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
 import java.util.List;
 
 @RequiredArgsConstructor
 @Service
 public class ChatRoomService {
     private final ProductRepository productRepository;
+    private final ProductService productService;
     private final ProductImgRepository productImgRepository;
     private final TradeRepository tradeRepository;
     private final ChatRoomRepository chatRoomRepository;
@@ -103,7 +105,7 @@ public class ChatRoomService {
         return new ChatRoomDetailResponse(imgUrls.get(0), productName, price, results);
     }
 
-    public UpdateCheckResponse updateCheck(String memberId, int roomId, Byte checkType) {
+    public UpdateCheckResponse updateCheck(String memberId, int roomId, Byte checkType) throws IOException {
         if ( checkType != 2 && checkType != 1) throw new IllegalArgumentException("invalid checkType");
 
         ChatRoom chatRoom = chatRoomRepository.findById(roomId);
@@ -139,6 +141,7 @@ public class ChatRoomService {
             }
         }
 
+        productService.upsertProductsToElastic(new ElasticProduct(found));
         chatRoomRepository.save(chatRoom);
         return new UpdateCheckResponse(chatRoom.getSellerCheck(), chatRoom.getBidderCheck());
     }

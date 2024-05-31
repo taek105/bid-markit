@@ -14,6 +14,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
+
 @RequiredArgsConstructor
 @Controller
 public class ChatRoomController {
@@ -38,7 +40,7 @@ public class ChatRoomController {
     }
 
     @PutMapping("/chatRooms/{roomId}/check/{checkType}") // 상품 상태변경
-    public ResponseEntity<UpdateCheckResponse> customerCheck(@RequestHeader(name="Authorization") String token, @PathVariable int roomId, @PathVariable int checkType) {
+    public ResponseEntity<UpdateCheckResponse> customerCheck(@RequestHeader(name="Authorization") String token, @PathVariable int roomId, @PathVariable int checkType) throws IOException {
         return ResponseEntity.ok(chatRoomService.updateCheck(tokenService.getMemberId(token.substring(7)), roomId, (byte) checkType));
     }
 }

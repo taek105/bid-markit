@@ -4,6 +4,7 @@ import com.capstone.bidmarkit.domain.AutoBid;
 import com.capstone.bidmarkit.domain.Bid;
 import com.capstone.bidmarkit.domain.Product;
 import com.capstone.bidmarkit.dto.AddAutoBidRequest;
+import com.capstone.bidmarkit.dto.ElasticProduct;
 import com.capstone.bidmarkit.repository.AutoBidRepository;
 import com.capstone.bidmarkit.repository.BidRepository;
 import com.capstone.bidmarkit.repository.ProductRepository;
@@ -16,6 +17,7 @@ import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
@@ -25,6 +27,7 @@ public class AutoBidService {
     private final AutoBidRepository autoBidRepository;
     private final BidRepository bidRepository;
     private final ProductRepository productRepository;
+    private final ProductService productService;
     private final HistoryService historyService;
     private final RedissonClient redissonClient;
 
@@ -36,7 +39,6 @@ public class AutoBidService {
 
     @Value("${redis.product-bid.lease-time}")
     private int leaseTime;
-
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -68,10 +70,7 @@ public class AutoBidService {
         try {
             boolean available = lock.tryLock(waitTime, leaseTime, TimeUnit.SECONDS);
 
-            if(!available) {
-                System.out.println("autoBid: failed to get a lock of productId " + product.getId());
-                throw new InterruptedException("autoBid: failed to get a lock of productId " + product.getId());
-            }
+            if(!available) throw new InterruptedException("autoBid: failed to get a lock of productId " + product.getId());
 
             AutoBid currentAutoBid = autoBidRepository.findByProductId(dto.getProductId());
 
@@ -102,9 +101,9 @@ public class AutoBidService {
                         product.setState(1);
                         product.setBidPrice(product.getPrice());
                         autoBidRepository.delete(newAutoBid);
-                    } else
-                        product.setBidPrice(minBidPrice);
+                    } else product.setBidPrice(minBidPrice);
                 }
+                productService.upsertProductsToElastic(new ElasticProduct(product));
                 return newAutoBid;
             }
 
@@ -122,6 +121,7 @@ public class AutoBidService {
                                 .build()
                 );
                 product.setBidPrice(minAutoBidPrice);
+                productService.upsertProductsToElastic(new ElasticProduct(product));
                 return newAutoBid;
             }
             minAutoBidPrice = dto.getCeilingPrice() + minBidPrice(dto.getCeilingPrice());
@@ -135,7 +135,8 @@ public class AutoBidService {
                             .build()
             );
             product.setBidPrice(minAutoBidPrice);
-        } catch (InterruptedException e) {
+            productService.upsertProductsToElastic(new ElasticProduct(product));
+        } catch (InterruptedException | IOException e) {
             throw new RuntimeException(e);
         } finally {
             lock.unlock();
