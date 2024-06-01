@@ -107,6 +107,8 @@ public class BidService {
                                     .price(calNewPrice > product.getPrice() ? product.getPrice() : calNewPrice)
                                     .build()
                     );
+                    historyService.upsertBidHistory(autoBid.getMemberId(), product.getName(), product.getCategory());
+
                     // 즉시구매가와 같거나 높은 가격으로 상회 입찰을 했을 경우, 즉시구매처리
                     if(newBidByAuto.getPrice().equals(product.getPrice())) {
                         product.setState(1);

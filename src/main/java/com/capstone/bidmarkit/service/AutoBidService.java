@@ -134,6 +134,7 @@ public class AutoBidService {
                             .price(minAutoBidPrice)
                             .build()
             );
+            historyService.upsertBidHistory(currentAutoBid.getMemberId(), product.getName(), product.getCategory());
             product.setBidPrice(minAutoBidPrice);
             productService.upsertProductsToElastic(new ElasticProduct(product));
         } catch (InterruptedException | IOException e) {

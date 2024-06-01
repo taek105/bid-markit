@@ -39,6 +39,8 @@ public class HistoryService {
 
     public void upsertBidHistory(String memberId, String keyword, int category) {
         Optional<BidHistory> found = bidHistoryRepository.findById(memberId);
+        if(found.isPresent() && found.get().getKeyword().contains(keyword)) return;
+
         BidHistory newBidHistory = BidHistory.builder()
                 .memberId(memberId)
                 .keyword(new ArrayList<>())
