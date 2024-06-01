@@ -275,7 +275,7 @@ public class ProductService {
 
     public Page<ProductBriefResponse> suggestProducts(String memberId, Pageable pageable) throws IOException {
         final float BID_BOOST = 20F, SEARCH_BOOST = 10F;
-        final int SEARCH_SIZE = 50;
+        final int SEARCH_SIZE = 48;
 
         BidHistory bidHistory = historyService.getBidHistory(memberId);
         SearchHistory searchHistory = historyService.getSearchHistory(memberId);

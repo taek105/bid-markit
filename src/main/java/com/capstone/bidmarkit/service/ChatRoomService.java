@@ -141,16 +141,16 @@ public class ChatRoomService {
             }
         }
 
-        productService.upsertProductsToElastic(new ElasticProduct(found));
         chatRoomRepository.save(chatRoom);
         return new UpdateCheckResponse(chatRoom.getSellerCheck(), chatRoom.getBidderCheck());
     }
 
-    public void updateProductState(Product product, int state) {
+    public void updateProductState(Product product, int state) throws IOException {
         if ( 0 > state || state > 3 ) throw new IllegalArgumentException("Illegal state");
 
         product.setState(state);
 
+        productService.upsertProductsToElastic(new ElasticProduct(product));
         productRepository.save(product);
 
 //        return new UpdateStateResponse(productId, res.getState());
