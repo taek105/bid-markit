@@ -5,6 +5,7 @@ import com.capstone.bidmarkit.domain.*;
 import com.capstone.bidmarkit.dto.*;
 import com.capstone.bidmarkit.repository.*;
 import com.querydsl.core.types.Projections;
+import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -17,7 +18,7 @@ import org.springframework.data.support.PageableExecutionUtils;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
-import java.util.List;
+import java.util.*;
 
 @RequiredArgsConstructor
 @Service
@@ -53,27 +54,40 @@ public class ChatRoomService {
         QChatRoom chatRoom = QChatRoom.chatRoom;
         QProductImg productImg = QProductImg.productImg;
         QProduct product = QProduct.product;
+        QChatMessage chatMessage = QChatMessage.chatMessage;
 
+        QChatMessage subChatMessage = new QChatMessage("subChatMessage");
         List<ChatRoomListResponse> results = queryFactory
-                .select(Projections.constructor
-                            (ChatRoomListResponse.class,
-                                chatRoom.id,
-                                chatRoom.sellerId,
-                                chatRoom.bidderId,
-                                productImg.imgUrl,
-                                product.name,
-                                chatRoom.updatedAt
-                            )
-                        )
+                .select(Projections.constructor(
+                        ChatRoomListResponse.class,
+                        chatRoom.id,
+                        chatRoom.sellerId,
+                        chatRoom.bidderId,
+                        productImg.imgUrl,
+                        product.name,
+                        chatMessage.content,
+                        chatRoom.updatedAt
+                ))
                 .from(chatRoom)
                 .leftJoin(productImg).on(chatRoom.productId.eq(productImg.product.id)
                         .and(productImg.isThumbnail.isTrue()))
                 .leftJoin(product).on(chatRoom.productId.eq(product.id))
+                .leftJoin(chatMessage).on(chatRoom.id.eq(chatMessage.chatRoomId)
+                        .and(chatMessage.createdAt.eq(
+                                JPAExpressions.select(subChatMessage.createdAt.max())
+                                        .from(subChatMessage)
+                                        .where(subChatMessage.chatRoomId.eq(chatRoom.id))
+                        )))
                 .where(chatRoom.sellerId.eq(memberId).or(chatRoom.bidderId.eq(memberId)))
                 .orderBy(chatRoom.updatedAt.desc())
                 .offset(pageable.getOffset())
                 .limit(pageable.getPageSize())
                 .fetch();
+
+        for (int i = 0; i < results.size()-1; i++) {
+            ChatRoomListResponse item = results.get(i);
+            if ( item.getId() == results.get(i+1).getId() )  results.remove(i);
+        }
 
         long total = queryFactory
                 .select(chatRoom.count())
@@ -92,17 +106,16 @@ public class ChatRoomService {
                 .select(Projections.constructor(ChatLogResponse.class, chatMessage.senderId, chatMessage.content, chatMessage.createdAt))
                 .from(chatMessage)
                 .where(chatMessage.chatRoomId.eq(roomId))
-                .orderBy(chatMessage.createdAt.desc())
+                .orderBy(chatMessage.createdAt.asc())
                 .limit(100)
                 .fetch();
 
-        int productId = chatRoomRepository.findProductIdByRoomId(roomId);
+        ChatRoom chatRoom = chatRoomRepository.findById(roomId);
+        Product product = productRepository.findById(chatRoom.getProductId()).orElseThrow();
 
-        List<String> imgUrls = productImgRepository.findImgUrlsByProductId(productId);
-        String productName = productRepository.findProductNameById(productId);
-        int price = productRepository.findPriceById(productId);
+        List<String> imgUrls = productImgRepository.findImgUrlsByProductId(product.getId());
 
-        return new ChatRoomDetailResponse(imgUrls.get(0), productName, price, results);
+        return new ChatRoomDetailResponse(imgUrls.get(0), product.getName(), chatRoom.getSellerId(), chatRoom.getBidderId(), product.getPrice(), chatRoom.getSellerCheck(), chatRoom.getBidderCheck(), results);
     }
 
     public UpdateCheckResponse updateCheck(String memberId, int roomId, Byte checkType) throws IOException {

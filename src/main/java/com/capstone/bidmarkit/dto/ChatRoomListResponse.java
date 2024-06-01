@@ -15,7 +15,6 @@ public class ChatRoomListResponse {
     private int id;
     private String sellerId, bidderId;
     private String thumbnail, productName;
+    private String lastMessage;
     private LocalDateTime updatedAt;
-
-
 }
