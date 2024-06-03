@@ -16,6 +16,7 @@ import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 import org.springframework.data.redis.listener.adapter.MessageListenerAdapter;
 import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
+import org.springframework.web.client.RestTemplate;
 
 @Configuration
 public class RedisConfig {
@@ -24,6 +25,11 @@ public class RedisConfig {
 
     @Value("${spring.data.redis.port}")
     private int redisPort;
+
+    @Bean
+    public RestTemplate restTemplate() {
+        return new RestTemplate();
+    }
 
     @Bean
     public LettuceConnectionFactory redisConnectionFactory() {
