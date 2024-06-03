@@ -14,4 +14,7 @@ public interface ProductImgRepository extends JpaRepository<ProductImg, Integer>
 
     @Query("SELECT p.imgUrl FROM ProductImg p WHERE p.product.id = :productId")
     List<String> findImgUrlsByProductId(@Param("productId") int productId);
+
+    @Query("SELECT p.imgUrl FROM ProductImg p WHERE p.product.id = :productId AND p.isThumbnail = true")
+    String findThumbnailUrlByProductId(@Param("productId") int productId);
 }

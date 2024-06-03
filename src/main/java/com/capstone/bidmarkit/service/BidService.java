@@ -4,6 +4,7 @@ import com.capstone.bidmarkit.domain.*;
 import com.capstone.bidmarkit.dto.AddBidRequest;
 import com.capstone.bidmarkit.dto.BidResponse;
 import com.capstone.bidmarkit.dto.ElasticProduct;
+import com.capstone.bidmarkit.dto.PushAlarmRequest;
 import com.capstone.bidmarkit.repository.AutoBidRepository;
 import com.capstone.bidmarkit.repository.BidRepository;
 import com.capstone.bidmarkit.repository.ProductRepository;
@@ -31,6 +32,7 @@ public class BidService {
     private final ProductService productService;
     private final HistoryService historyService;
     private final RedissonClient redissonClient;
+    private final PushService pushService;
 
     @Value("${redis.product-bid.key}")
     private String productBidKey;
@@ -60,6 +62,8 @@ public class BidService {
         // 입찰 대상의 최소 상회 입찰가보다 낮은 가격으로 입찰 시도 시, 예외 발생
         if(product.getBidPrice() + minBidPrice(product.getBidPrice()) >= dto.getPrice()) throw new IllegalArgumentException("Price to bid is not enough");
 
+        Bid foundTopBid = bidRepository.findTopByProductIdOrderByPriceDesc(dto.getProductId()).orElse(null);
+
         RLock lock = redissonClient.getLock(productBidKey + product.getId());
 
         Bid newBid;
@@ -82,6 +86,15 @@ public class BidService {
             );
             product.setBidPrice(newBid.getPrice());
 
+            if(foundTopBid != null) {
+                pushService.pushAlarm(PushAlarmRequest.builder()
+                        .productName(product.getName())
+                        .imgURL(product.getImages().get(0).getImgUrl())
+                        .memberId(foundTopBid.getMemberId())
+                        .type(3)
+                        .build());
+            }
+
             AutoBid autoBid = autoBidRepository.findByProductId(dto.getProductId());
 
             // 즉시구매가와 같거나 높은 가격으로 상회 입찰을 했을 경우, 즉시구매처리
@@ -98,6 +111,12 @@ public class BidService {
                 // 자동 입찰 설정 금액이 최소 상회 입찰가보다 작다면, 자동 입찰 설정 해제 / 크다면, 자동 입찰 진행
                 if(autoBid.getCeilingPrice() < calNewPrice) {
                     autoBidRepository.delete(autoBid);
+                    pushService.pushAlarm(PushAlarmRequest.builder()
+                            .productName(product.getName())
+                            .imgURL(product.getImages().get(0).getImgUrl())
+                            .memberId(autoBid.getMemberId())
+                            .type(4)
+                            .build());
                     product.setBidPrice(newBid.getPrice());
                 } else {
                     Bid newBidByAuto = bidRepository.save(
@@ -107,6 +126,12 @@ public class BidService {
                                     .price(calNewPrice > product.getPrice() ? product.getPrice() : calNewPrice)
                                     .build()
                     );
+                    pushService.pushAlarm(PushAlarmRequest.builder()
+                            .productName(product.getName())
+                            .imgURL(product.getImages().get(0).getImgUrl())
+                            .memberId(memberId)
+                            .type(3)
+                            .build());
                     historyService.upsertBidHistory(autoBid.getMemberId(), product.getName(), product.getCategory());
 
                     // 즉시구매가와 같거나 높은 가격으로 상회 입찰을 했을 경우, 즉시구매처리
@@ -123,6 +148,7 @@ public class BidService {
         } finally {
             lock.unlock();
         }
+
         return newBid;
     }
 

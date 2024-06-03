@@ -5,14 +5,17 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
 
-@Getter
-@Setter
+import java.time.LocalDateTime;
+
 @AllArgsConstructor
 @Builder
-public class PushAlarmRequest  {
+@Getter
+@Setter
+public class QnAResponse {
+    private Integer questionId;
     private String memberId;
-    private String productName;
-    private String imgURL;
     private String content;
-    private int type;
+    private LocalDateTime createdAt;
+    private String ansContent;
+    private LocalDateTime ansCreatedAt;
 }

@@ -59,6 +59,7 @@ public class ProductService {
     private final ProductUpsertScheduleRepository productUpsertScheduleRepository;
     private final RedisTemplate redisTemplate;
     private final RedissonClient redissonClient;
+    private final PushService pushService;
 
     @Value("${spring.cloud.gcp.storage.bucket}")
     private String bucketName;
@@ -205,27 +206,33 @@ public class ProductService {
     }
 
     public ProductDetailResponse findDetail(String memberId, int productId) {
-        ProductDetailResponse res = new ProductDetailResponse();
+        Product found = productRepository.findById(productId).orElseThrow(() -> new IllegalArgumentException("Product not found"));
 
-        Product findProduct = productRepository.findById(productId).orElseThrow(() -> new IllegalArgumentException("Product not found"));
+        if(!memberId.isEmpty()) historyService.upsertSearchHistory(memberId, found.getName(), found.getCategory());
 
-        if(!memberId.isEmpty()) historyService.upsertSearchHistory(memberId, findProduct.getName(), findProduct.getCategory());
-
-        res.setImages(productImgRepository.findByProductId(productId)
-                .stream()
-                .map(ProductImg::getImgUrl)
-                .collect(Collectors.toList()));
-        res.setProductName(findProduct.getName());
-        res.setCategory(findProduct.getCategory());
-        res.setBidPrice(findProduct.getBidPrice());
-        res.setInitPrice(findProduct.getInitPrice());
-        res.setPrice(findProduct.getPrice());
-        res.setState(findProduct.getState());
-        res.setDeadline(findProduct.getDeadline());
-        res.setSellerName(findProduct.getMemberId());
-        res.setContent(findProduct.getContent());
-
-        return res;
+        return ProductDetailResponse.builder()
+                .productName(found.getName())
+                .bidPrice(found.getBidPrice())
+                .price(found.getPrice())
+                .category(found.getCategory())
+                .content(found.getContent())
+                .sellerName(found.getMemberId())
+                .initPrice(found.getInitPrice())
+                .deadline(found.getDeadline())
+                .state(found.getState())
+                .images(found.getImages().stream().map(img -> img.getImgUrl()).toList())
+                .questions(found.getQuestions().stream().map(question ->
+                        QnAResponse.builder()
+                                .questionId(question.getId())
+                                .memberId(question.getMemberId())
+                                .content(question.getContent())
+                                .createdAt(question.getCreatedAt())
+                                .ansContent(question.getAnswer() == null ? null : question.getAnswer().getContent())
+                                .ansCreatedAt(question.getAnswer() == null ? null : question.getAnswer().getCreatedAt())
+                                .build()
+                        ).toList()
+                )
+                .build();
     }
 
     @Transactional
@@ -235,6 +242,8 @@ public class ProductService {
         // 상품 상태가 판매 중이 아닐 경우, 예외 발생
         if(product.getState() != 0)
             throw new IllegalArgumentException("It is not a purchasable product");
+
+        Bid foundTopBid = bidRepository.findTopByProductIdOrderByPriceDesc(productId).orElse(null);
 
         RLock lock = redissonClient.getLock(productBidKey + productId);
 
@@ -270,6 +279,15 @@ public class ProductService {
             throw new RuntimeException(e);
         } finally {
             lock.unlock();
+        }
+
+        if(foundTopBid != null) {
+            pushService.pushAlarm(PushAlarmRequest.builder()
+                    .productName(product.getName())
+                    .imgURL(product.getImages().get(0).getImgUrl())
+                    .memberId(foundTopBid.getMemberId())
+                    .type(3)
+                    .build());
         }
     }
 

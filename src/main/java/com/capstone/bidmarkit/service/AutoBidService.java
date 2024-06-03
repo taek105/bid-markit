@@ -5,6 +5,7 @@ import com.capstone.bidmarkit.domain.Bid;
 import com.capstone.bidmarkit.domain.Product;
 import com.capstone.bidmarkit.dto.AddAutoBidRequest;
 import com.capstone.bidmarkit.dto.ElasticProduct;
+import com.capstone.bidmarkit.dto.PushAlarmRequest;
 import com.capstone.bidmarkit.repository.AutoBidRepository;
 import com.capstone.bidmarkit.repository.BidRepository;
 import com.capstone.bidmarkit.repository.ProductRepository;
@@ -30,6 +31,7 @@ public class AutoBidService {
     private final ProductService productService;
     private final HistoryService historyService;
     private final RedissonClient redissonClient;
+    private final PushService pushService;
 
     @Value("${redis.product-bid.key}")
     private String productBidKey;
@@ -63,6 +65,8 @@ public class AutoBidService {
         if(minBidPrice >= dto.getCeilingPrice())
             throw new IllegalArgumentException("Price to set AutoBid is not enough");
 
+        Bid currentBid = bidRepository.findTopByProductIdOrderByPriceDesc(dto.getProductId()).orElse(null);
+
         RLock lock = redissonClient.getLock(productBidKey + product.getId());
 
         AutoBid newAutoBid;
@@ -86,15 +90,21 @@ public class AutoBidService {
             // 기존 자동 입찰 설정이 없을 경우,
             if(currentAutoBid == null) {
                 autoBidRepository.save(newAutoBid);
-                Optional<Bid> currentBid = bidRepository.findTopByProductIdOrderByPriceDesc(dto.getProductId());
                 // 최고가 입찰 내역이 존재하고, 해당 입찰을 진행한 멤버가 지금 자동 입찰을 시도하는 멤버가 아닐 경우, 상회 입찰을 진행
-                if(currentBid.isPresent() && !currentBid.get().getMemberId().equals(memberId)) {
+                if(currentBid != null && !currentBid.getMemberId().equals(memberId)) {
                     bidRepository.save(
                             Bid.builder()
                                     .productId(dto.getProductId())
                                     .memberId(memberId)
                                     .price(minBidPrice)
                                     .build()
+                    );
+                    pushService.pushAlarm(PushAlarmRequest.builder()
+                            .productName(product.getName())
+                            .imgURL(product.getImages().get(0).getImgUrl())
+                            .memberId(currentBid.getMemberId())
+                            .type(3)
+                            .build()
                     );
                     // 즉시구매가로 입찰했을 경우, 즉시구매처리
                     if(product.getPrice().equals(minBidPrice)) {
@@ -112,6 +122,13 @@ public class AutoBidService {
 
             if(minAutoBidPrice <= dto.getCeilingPrice()) {
                 autoBidRepository.delete(currentAutoBid);
+                pushService.pushAlarm(PushAlarmRequest.builder()
+                        .productName(product.getName())
+                        .imgURL(product.getImages().get(0).getImgUrl())
+                        .memberId(currentAutoBid.getMemberId())
+                        .type(4)
+                        .build()
+                );
                 autoBidRepository.save(newAutoBid);
                 bidRepository.save(
                         Bid.builder()
@@ -133,6 +150,13 @@ public class AutoBidService {
                             .memberId(currentAutoBid.getMemberId())
                             .price(minAutoBidPrice)
                             .build()
+            );
+            pushService.pushAlarm(PushAlarmRequest.builder()
+                    .productName(product.getName())
+                    .imgURL(product.getImages().get(0).getImgUrl())
+                    .memberId(memberId)
+                    .type(4)
+                    .build()
             );
             historyService.upsertBidHistory(currentAutoBid.getMemberId(), product.getName(), product.getCategory());
             product.setBidPrice(minAutoBidPrice);

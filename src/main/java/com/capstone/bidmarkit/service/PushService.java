@@ -2,6 +2,7 @@ package com.capstone.bidmarkit.service;
 
 import com.capstone.bidmarkit.dto.PushAlarmRequest;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
@@ -10,12 +11,14 @@ import org.springframework.web.client.RestTemplate;
 public class PushService {
 
     private final RestTemplate restTemplate;
-    String apiUrl = "https://cloudrunpushserver-l72tmny6da-du.a.run.app/"; // 알림 서버의 URL
+
+    @Value("${push.server.url}")
+    private String apiUrl; // 알림 서버의 URL
 
 
     public void pushAlarm (PushAlarmRequest request) {
         try {
-            restTemplate.postForObject(apiUrl + "push/" + request.getMemberId(), request, Void.class);
+            restTemplate.postForObject(apiUrl + "/push/" + request.getMemberId(), request, Void.class);
         } catch (Exception e) {
             throw new RuntimeException("error in pushalarm");
         }

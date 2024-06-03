@@ -44,12 +44,12 @@ public class ChatService {
             pushedId = chatRoom.getBidderId();
         Product product = productRepository.findById(chatRoom.getProductId()).orElseThrow();
 
-        List<String> imgUrls = productImgRepository.findImgUrlsByProductId(product.getId());
+        String imgUrl = productImgRepository.findThumbnailUrlByProductId(product.getId());
 
         return new PushAlarmRequest(
                 pushedId,
                 product.getName(),
-                imgUrls.get(0),
+                imgUrl,
                 request.getContent(),
                 5);
     }
