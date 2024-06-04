@@ -62,7 +62,7 @@ public class AutoBidService {
         minBidPrice = product.getPrice() < minBidPrice ? product.getPrice() : minBidPrice;
 
         // 입찰 대상의 최소 상회 입찰가보다 낮은 가격으로 자동 입찰 시도 시, 예외 발생
-        if(minBidPrice >= dto.getCeilingPrice())
+        if(minBidPrice > dto.getCeilingPrice())
             throw new IllegalArgumentException("Price to set AutoBid is not enough");
 
         Bid currentBid = bidRepository.findTopByProductIdOrderByPriceDesc(dto.getProductId()).orElse(null);
