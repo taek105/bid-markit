@@ -24,13 +24,13 @@ public class PushService {
             restTemplate.postForObject(apiUrl + "/push/" + request.getMemberId(), request, Void.class);
 
             if ( request.getType() == 1 )
-                request.setContent("새로운 QnA 문의글이 있어요.");
+                request.setContent(request.getProductName() + " 상품에 새로운 QnA 문의글이 있어요.");
             else if ( request.getType() == 2 )
-                request.setContent("새로운 QnA 답변글이 있어요.");
+                request.setContent(request.getProductName() + " 상품에 새로운 QnA 답변글이 있어요.");
             else if ( request.getType() == 3 )
-                request.setContent("상위 입찰이 생겼어요.");
+                request.setContent(request.getProductName() + " 상품에 상위 입찰이 생겼어요.");
             else if ( request.getType() == 4 )
-                request.setContent("자동 입찰이 끝났어요.");
+                request.setContent(request.getProductName() + " 상품의 자동 입찰이 끝났어요.");
 
             alarmLogRepository.save(AlarmLog.builder()
                     .memberId(request.getMemberId())

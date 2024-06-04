@@ -9,7 +9,7 @@ import lombok.Setter;
 @Setter
 @AllArgsConstructor
 @Builder
-public class PushAlarmRequest  {
+public class PushAlarmRequest {
     private String memberId;
     private String productName;
     private String imgURL;
