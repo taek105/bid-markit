@@ -107,7 +107,7 @@ public class ChatRoomService {
                 .from(chatMessage)
                 .where(chatMessage.chatRoomId.eq(roomId))
                 .orderBy(chatMessage.createdAt.asc())
-                .limit(100)
+//                .limit(100)
                 .fetch();
 
         ChatRoom chatRoom = chatRoomRepository.findById(roomId);
