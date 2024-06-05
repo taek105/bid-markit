@@ -25,6 +25,7 @@ public class CustomExceptionHandler {
         map.put("error type", httpStatus.getReasonPhrase());
         map.put("code", "400");
         map.put("message", e.getMessage());
+        e.printStackTrace();
 
         return new ResponseEntity<>(map, responseHeaders, httpStatus);
     }
@@ -39,6 +40,7 @@ public class CustomExceptionHandler {
         map.put("error type", httpStatus.getReasonPhrase());
         map.put("code", "400");
         map.put("message", e.getMessage());
+        e.printStackTrace();
 
         return new ResponseEntity<>(map, responseHeaders, httpStatus);
     }

@@ -50,28 +50,28 @@ public class AutoBidService {
         // 입찰 대상 상품 미검색 시, 예외 발생
         Product product = productRepository.findById(dto.getProductId()).orElseThrow(() -> new IllegalArgumentException("Product not found"));
 
-        // 상품 상태가 판매 중이 아닐 경우, 예외 발생
-        if(product.getState() != 0)
-            throw new IllegalArgumentException("It is not a biddable product");
-
         // 본인 상품을 자동 입찰 시도 시, 예외 발생
         if(product.getMemberId().equals(memberId))
             throw new IllegalArgumentException("You can't bid for your product yourself.");
-        
-        int minBidPrice = product.getBidPrice() + minBidPrice(product.getBidPrice());
-        minBidPrice = product.getPrice() < minBidPrice ? product.getPrice() : minBidPrice;
-
-        // 입찰 대상의 최소 상회 입찰가보다 낮은 가격으로 자동 입찰 시도 시, 예외 발생
-        if(minBidPrice > dto.getCeilingPrice())
-            throw new IllegalArgumentException("Price to set AutoBid is not enough");
-
-        Bid currentBid = bidRepository.findTopByProductIdOrderByPriceDesc(dto.getProductId()).orElse(null);
 
         RLock lock = redissonClient.getLock(productBidKey + product.getId());
 
         AutoBid newAutoBid;
 
         try {
+            // 상품 상태가 판매 중이 아닐 경우, 예외 발생
+            if(product.getState() != 0)
+                throw new IllegalArgumentException("It is not a biddable product");
+
+            int minBidPrice = product.getBidPrice() + minBidPrice(product.getBidPrice());
+            minBidPrice = product.getPrice() < minBidPrice ? product.getPrice() : minBidPrice;
+
+            // 입찰 대상의 최소 상회 입찰가보다 낮은 가격으로 자동 입찰 시도 시, 예외 발생
+            if(minBidPrice > dto.getCeilingPrice())
+                throw new IllegalArgumentException("Price to set AutoBid is not enough");
+
+            Bid currentBid = bidRepository.findTopByProductIdOrderByPriceDesc(dto.getProductId()).orElse(null);
+
             boolean available = lock.tryLock(waitTime, leaseTime, TimeUnit.SECONDS);
 
             if(!available) throw new InterruptedException("autoBid: failed to get a lock of productId " + product.getId());

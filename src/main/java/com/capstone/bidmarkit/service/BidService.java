@@ -51,24 +51,24 @@ public class BidService {
         // 입찰 대상 상품 미검색 시, 예외 발생
         Product product = productRepository.findById(dto.getProductId()).orElseThrow(() -> new IllegalArgumentException("Product not found"));
 
-        // 상품 상태가 판매 중이 아닐 경우, 예외 발생
-        if(product.getState() != 0)
-            throw new IllegalArgumentException("It is not a bidable product");
-
         // 본인 상품을 자동 입찰 시도 시, 예외 발생
         if(product.getMemberId().equals(memberId))
             throw new IllegalArgumentException("You can't bid for your product yourself.");
-
-        // 입찰 대상의 최소 상회 입찰가보다 낮은 가격으로 입찰 시도 시, 예외 발생
-        if(product.getBidPrice() + minBidPrice(product.getBidPrice()) > dto.getPrice()) throw new IllegalArgumentException("Price to bid is not enough");
-
-        Bid foundTopBid = bidRepository.findTopByProductIdOrderByPriceDesc(dto.getProductId()).orElse(null);
 
         RLock lock = redissonClient.getLock(productBidKey + product.getId());
 
         Bid newBid;
 
         try {
+            // 상품 상태가 판매 중이 아닐 경우, 예외 발생
+            if(product.getState() != 0)
+                throw new IllegalArgumentException("It is not a bidable product");
+
+            // 입찰 대상의 최소 상회 입찰가보다 낮은 가격으로 입찰 시도 시, 예외 발생
+            if(product.getBidPrice() + minBidPrice(product.getBidPrice()) > dto.getPrice()) throw new IllegalArgumentException("Price to bid is not enough");
+
+            Bid foundTopBid = bidRepository.findTopByProductIdOrderByPriceDesc(dto.getProductId()).orElse(null);
+
             boolean available = lock.tryLock(waitTime, leaseTime, TimeUnit.SECONDS);
 
             if(!available) throw new InterruptedException("bid: failed to get a lock of productId " + product.getId());

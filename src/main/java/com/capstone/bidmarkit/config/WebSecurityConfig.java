@@ -60,7 +60,8 @@ public class WebSecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.GET, "/products/**").permitAll()
                         .requestMatchers(HttpMethod.PUT, "/products/**").permitAll() // 상품 상태변경 처리
-                        .requestMatchers("/login", "/member", "/accessToken", "/bids/**", "/error", "/", "/suggest/keywords", "/search/products").permitAll()
+                        .requestMatchers("/login", "/member", "/accessToken", "/bids/**", "/error", "/",
+                                "/instance", "/suggest/keywords", "/search/products").permitAll()
                         .requestMatchers("/ws-stomp/**").permitAll() // 게이트웨이 거치지 않고 직접 인증
                         .requestMatchers("/test").hasRole("MEMBER")
                         .anyRequest().authenticated())

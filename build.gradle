@@ -6,7 +6,7 @@ plugins {
 }
 
 group = 'com.capstone'
-version = '0.0.2-SNAPSHOT'
+version = '0.0.6-SNAPSHOT'
 
 java {
     sourceCompatibility = '17'
