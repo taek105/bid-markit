@@ -31,6 +31,8 @@ public class PushService {
                 request.setContent(request.getProductName() + " 상품에 상위 입찰이 생겼어요.");
             else if ( request.getType() == 4 )
                 request.setContent(request.getProductName() + " 상품의 자동 입찰이 끝났어요.");
+            else if ( request.getType() == 5 )
+                request.setContent(request.getProductName() + " 상품의 새로운 채팅 : " + request.getContent());
 
             alarmLogRepository.save(AlarmLog.builder()
                     .memberId(request.getMemberId())
